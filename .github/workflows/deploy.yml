@@ -13,6 +13,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install & Build React
+        env:
+          VITE_API_BASE_URL: https://app.getalloro.com/api
         run: |
           npm install
           npm run build  # This creates the 'dist' or 'build' folder

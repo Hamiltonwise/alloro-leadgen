@@ -43,6 +43,7 @@ import {
 } from "./types";
 import { GBPSearchSelect } from "./GBPSearchSelect";
 import { useAuditPolling } from "./useAuditPolling";
+import { API_BASE_URL } from "./utils/config";
 
 // --- COMPONENTS ---
 
@@ -2621,9 +2622,6 @@ const DashboardStage = ({
 };
 
 // --- MAIN APP ---
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 const App = () => {
   const [stage, setStage] = useState<AuditStage>("input");

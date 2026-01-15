@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AuditStatusResponse, AuditStage } from "./types";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
-const POLL_INTERVAL = 2500; // 2.5 seconds
+import { API_BASE_URL, POLL_INTERVAL } from "./utils/config";
 
 export function useAuditPolling(auditId: string | null) {
   const [data, setData] = useState<AuditStatusResponse | null>(null);
