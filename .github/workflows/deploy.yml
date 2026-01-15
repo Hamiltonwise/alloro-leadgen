@@ -1,27 +1,28 @@
-name: Deploy audit.getalloro.com
+name: Build and Deploy React
 
 on:
   push:
     branches:
-      - main # This triggers the deploy whenever you push to main
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@master
+      - name: Install & Build React
+        run: |
+          npm install
+          npm run build  # This creates the 'dist' or 'build' folder
+
+      - name: Deploy to EC2 via SCP
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
-            cd /var/www/audit.getalloro.com/public_html
-            # Ensure the directory is a safe directory for git
-            git config --global --add safe.directory /var/www/audit.getalloro.com/public_html
-            git fetch origin main
-            git reset --hard origin/main
+          source: "dist/*" # Or "build/*" depending on your React setup
+          target: "/var/www/audit.getalloro.com/public_html"
+          strip_components: 1 # This prevents it from creating a /dist/ folder inside your web root
