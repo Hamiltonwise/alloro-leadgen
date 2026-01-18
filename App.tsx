@@ -23,6 +23,7 @@ import {
   Phone,
   Sparkles,
   ArrowRight,
+  Calendar,
 } from "lucide-react";
 import {
   MOCK_BUSINESS,
@@ -341,10 +342,21 @@ const Sidebar = ({
   stage,
   progress,
   setStage,
+  onDashboardAction,
 }: {
   stage: AuditStage;
   progress: number;
   setStage: (s: AuditStage) => void;
+  onDashboardAction?: (
+    action:
+      | "scroll-overall"
+      | "scroll-rank"
+      | "scroll-gbp"
+      | "scroll-website"
+      | "open-insights-gbp"
+      | "open-insights-website"
+      | "schedule-call",
+  ) => void;
 }) => {
   const steps: { id: AuditStage; label: string; icon: any }[] = [
     { id: "input", label: "Business Search", icon: Search },
@@ -354,7 +366,95 @@ const Sidebar = ({
     { id: "dashboard", label: "Final Report", icon: TrendingUp },
   ];
 
+  const dashboardSteps = [
+    { label: "Overall Score", icon: Star },
+    { label: "Local Ranking Insights", icon: Users },
+    {
+      label: "GBP Analysis",
+      icon: MapPin,
+    },
+    {
+      label: "Website Performance Metrics",
+      icon: Globe,
+    },
+    {
+      label: "GBP Key Insights",
+      icon: Sparkles,
+    },
+    {
+      label: "Website Key Insights",
+      icon: Sparkles,
+    },
+    {
+      id: "schedule-call",
+      label: "Schedule A Strategy Call",
+      icon: Calendar,
+      color: "text-orange-500",
+    },
+  ];
+
   const currentStepIndex = steps.findIndex((s) => s.id === stage);
+
+  // If we are in dashboard stage, we render a completely different sidebar content
+  if (stage === "dashboard") {
+    return (
+      <div className="hidden md:flex w-80 flex-col bg-white border-r border-gray-100 h-screen p-6 shadow-lg z-20">
+        <div className="mb-8 flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Alloro"
+            className="w-9 h-9 object-contain"
+          />
+          <div className="flex flex-col">
+            <span className="font-bold text-lg text-gray-800 tracking-tight font-sans leading-tight">
+              Alloro
+            </span>
+            <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+              {stage === "dashboard"
+                ? "What we got for you"
+                : "Practice Analyzer"}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-4 flex-1 overflow-y-auto">
+          {dashboardSteps.map((step, idx) => {
+            return (
+              <button
+                key={step.id}
+                onClick={() =>
+                  onDashboardAction && onDashboardAction(step.id as any)
+                }
+                className={`w-full flex items-center gap-3 transition-all duration-200 text-left group py-2.5 px-3 rounded-lg hover:bg-gray-50 ${
+                  step.color ? "" : "text-gray-600"
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg ${
+                    step.color
+                      ? "bg-orange-50 text-orange-500"
+                      : "bg-gray-100 text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-500"
+                  } transition-colors`}
+                >
+                  <step.icon
+                    className={`w-4 h-4 ${step.color ? step.color : ""}`}
+                  />
+                </div>
+                <span
+                  className={`text-sm font-medium ${
+                    step.color
+                      ? "text-orange-600 font-bold"
+                      : "text-gray-600 group-hover:text-gray-900"
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="hidden md:flex w-80 flex-col bg-white border-r border-gray-100 h-screen p-6 shadow-lg z-20">
@@ -375,8 +475,6 @@ const Sidebar = ({
           const isCompleted = currentStepIndex > idx;
           const isActive = step.id === stage;
           const isClickable = isCompleted || isActive;
-          const isFinalReport = step.id === "dashboard";
-          const isDashboardActive = stage === "dashboard" && isFinalReport;
           const isLastStep = idx === steps.length - 1;
 
           return (
@@ -398,13 +496,11 @@ const Sidebar = ({
                 <div className="relative z-10">
                   {isCompleted ? (
                     <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : isActive && !isDashboardActive ? (
+                  ) : isActive ? (
                     <div className="relative">
                       <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
                       <div className="absolute inset-0 bg-brand-500/20 blur-lg rounded-full animate-pulse"></div>
                     </div>
-                  ) : isActive && isDashboardActive ? (
-                    <CheckCircle2 className="w-6 h-6 text-brand-600" />
                   ) : (
                     <Circle className="w-6 h-6 text-gray-200" />
                   )}
@@ -433,7 +529,7 @@ const Sidebar = ({
         })}
       </div>
 
-      {stage !== "input" && stage !== "dashboard" && (
+      {stage !== "input" && (
         <div className="mt-auto">
           <div className="flex justify-between text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">
             <span>Time elapsed</span>
@@ -2070,7 +2166,9 @@ const ActionItemsModal = ({
         <div className="sticky top-0 bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold">
-              {dataType === "gbp" ? "GBP Performance" : "Website Performance"}
+              {dataType === "gbp"
+                ? "Google Business Profile Key Insights"
+                : "Website Performance Key Insights"}
             </h2>
             <p className="text-sm text-white/80 mt-1">
               Detailed insights across {pillars.length} pillars
@@ -2174,6 +2272,12 @@ const DashboardStage = ({
   auditId,
   emailSubmitted,
   onEmailSubmitted,
+  modalOpen,
+  setModalOpen,
+  selectedPillarCategory,
+  setSelectedPillarCategory,
+  selectedDataType,
+  setSelectedDataType,
 }: {
   business: BusinessProfile;
   websiteData: WebsiteAnalysis;
@@ -2182,15 +2286,13 @@ const DashboardStage = ({
   auditId?: string | null;
   emailSubmitted: boolean;
   onEmailSubmitted: () => void;
+  modalOpen: boolean;
+  setModalOpen: (open: boolean) => void;
+  selectedPillarCategory: string | null;
+  setSelectedPillarCategory: (category: string | null) => void;
+  selectedDataType: "website" | "gbp" | null;
+  setSelectedDataType: (type: "website" | "gbp" | null) => void;
 }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedPillarCategory, setSelectedPillarCategory] = useState<
-    string | null
-  >(null);
-  const [selectedDataType, setSelectedDataType] = useState<
-    "website" | "gbp" | null
-  >(null);
-
   // Find the competitor with most reviews for comparison
   const topCompetitor = MOCK_COMPETITORS.reduce(
     (max, comp) => (comp.reviewsCount > max.reviewsCount ? comp : max),
@@ -2221,7 +2323,7 @@ const DashboardStage = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-100">
+    <div className="h-full overflow-y-auto bg-gray-100 scroll-smooth">
       {/* Action Items Modal */}
       <AnimatePresence>
         {modalOpen && (
@@ -2410,7 +2512,10 @@ const DashboardStage = ({
         </motion.div>
 
         {/* Overall Grades Section - Enhanced with Animated Circular Progress - 3 Column */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div
+          id="scroll-overall"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8"
+        >
           {/* Website Grade */}
           <motion.div
             className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 overflow-hidden relative"
@@ -2596,6 +2701,7 @@ const DashboardStage = ({
           )}
         </div>
 
+        <span id="scroll-rank"></span>
         {/* Email Paywall Wrapper - Content below 3-column cards */}
         <div className="relative">
           {/* Content to be blurred when email not submitted */}
@@ -2626,7 +2732,7 @@ const DashboardStage = ({
                       Local Ranking Insights
                     </h3>
                     <p className="text-sm text-white/80 mt-0.5">
-                      Competitive positioning & market analysis
+                      How you are performing against your competitors
                     </p>
                   </div>
                 </div>
@@ -2675,7 +2781,6 @@ const DashboardStage = ({
                 </div>
               </motion.div>
             )}
-
             {/* GBP Performance Metrics - Horizontal Progress Bars */}
             <motion.div
               className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
@@ -2704,7 +2809,7 @@ const DashboardStage = ({
                     <MapPin className="w-5 h-5 text-brand-500" />
                   </motion.div>
                   <h3 className="text-xl font-bold text-gray-800">
-                    GBP Performance Metrics
+                    Google Business Profile Analysis
                   </h3>
                 </div>
                 <motion.button
@@ -2717,7 +2822,7 @@ const DashboardStage = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  See Full Insights
+                  See Key Insights
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
               </div>
@@ -2742,10 +2847,9 @@ const DashboardStage = ({
                   ))}
               </div>
             </motion.div>
-
             {/* Website Performance Metrics - Horizontal Progress Bars */}
             <motion.div
-              className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
+              className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative pt-10"
               custom={4}
               variants={cardVariants}
               initial="hidden"
@@ -2784,7 +2888,7 @@ const DashboardStage = ({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  See Full Insights
+                  See Key Insights
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
               </div>
@@ -2935,12 +3039,11 @@ const DashboardStage = ({
                       <Lock className="w-5 h-5 text-white" />
                     </motion.div>
                     <h2 className="text-lg font-bold mb-1">
-                      Unlock Your Complete Alloro Growth Plan
+                      Get help from Alloro team
                     </h2>
                     <p className="text-gray-400 mb-4 text-xs leading-relaxed">
-                      Get AI-powered recommendations, your personalized 30-day
-                      action plan, and strategies to close the {reviewGap}{" "}
-                      review gap.
+                      Unlock full detailed analysis & personalized growth plan
+                      by booking a free strategy call with our experts.
                     </p>
                     <motion.a
                       href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
@@ -2983,6 +3086,13 @@ const App = () => {
   const [gbpCarouselComplete, setGbpCarouselComplete] = useState(false);
   const [pendingStage, setPendingStage] = useState<AuditStage | null>(null);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPillarCategory, setSelectedPillarCategory] = useState<
+    string | null
+  >(null);
+  const [selectedDataType, setSelectedDataType] = useState<
+    "website" | "gbp" | null
+  >(null);
 
   // Use the polling hook
   const {
@@ -3142,6 +3252,66 @@ const App = () => {
     [auditData?.gbp_analysis],
   );
 
+  // Dashboard Action Handler
+  const handleDashboardAction = (
+    action:
+      | "scroll-overall"
+      | "scroll-rank"
+      | "scroll-gbp"
+      | "scroll-website"
+      | "open-insights-gbp"
+      | "open-insights-website"
+      | "schedule-call",
+  ) => {
+    // Helper to safely scroll an element into view with offset
+    const scrollWithOffset = (id: string) => {
+      const element = document.getElementById(id);
+      if (element) {
+        // Find the scroll container (it's the parent div with overflow-y-auto in DashboardStage)
+        const container = element.closest(".overflow-y-auto");
+        if (container) {
+          const topPos = element.offsetTop;
+          // Add padding-top to account for sticky headers or visual spacing
+          // Using 80px buffer for better positioning
+          container.scrollTo({ top: topPos - 80, behavior: "smooth" });
+        } else {
+          // Fallback if container not found
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    };
+
+    switch (action) {
+      case "scroll-overall":
+        scrollWithOffset("scroll-overall");
+        break;
+      case "scroll-rank":
+        scrollWithOffset("scroll-rank");
+        break;
+      case "scroll-gbp":
+        scrollWithOffset("scroll-gbp");
+        break;
+      case "scroll-website":
+        scrollWithOffset("scroll-website");
+        break;
+      case "open-insights-gbp":
+        // Open the modal with default selection (GBP analysis)
+        setSelectedDataType("gbp");
+        setSelectedPillarCategory(null);
+        setModalOpen(true);
+        break;
+      case "open-insights-website":
+        // Open the modal with default selection (Website analysis)
+        setSelectedDataType("website");
+        setSelectedPillarCategory(null);
+        setModalOpen(true);
+        break;
+      case "schedule-call":
+        window.open("https://calendar.app.google/yJsmRsEnBSfDTVyz8", "_blank");
+        break;
+    }
+  };
+
   return (
     <div className="flex h-screen bg-white font-sans text-slate-900 overflow-hidden selection:bg-brand-100 selection:text-brand-900">
       {/* Sidebar - Visible on Desktop */}
@@ -3153,7 +3323,12 @@ const App = () => {
             exit={{ x: -300 }}
             className="h-full z-30"
           >
-            <Sidebar stage={stage} progress={progress} setStage={setStage} />
+            <Sidebar
+              stage={stage}
+              progress={progress}
+              setStage={setStage}
+              onDashboardAction={handleDashboardAction}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -3239,6 +3414,12 @@ const App = () => {
                 auditId={auditId}
                 emailSubmitted={emailSubmitted}
                 onEmailSubmitted={() => setEmailSubmitted(true)}
+                modalOpen={modalOpen}
+                setModalOpen={setModalOpen}
+                selectedPillarCategory={selectedPillarCategory}
+                setSelectedPillarCategory={setSelectedPillarCategory}
+                selectedDataType={selectedDataType}
+                setSelectedDataType={setSelectedDataType}
               />
             </motion.div>
           )}
