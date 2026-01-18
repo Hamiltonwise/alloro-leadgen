@@ -122,10 +122,10 @@ const CircularProgress = ({
             actualColor === "green"
               ? "bg-green-400"
               : actualColor === "yellow"
-              ? "bg-yellow-400"
-              : actualColor === "red"
-              ? "bg-red-400"
-              : "bg-brand-400"
+                ? "bg-yellow-400"
+                : actualColor === "red"
+                  ? "bg-red-400"
+                  : "bg-brand-400"
           }`}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: [0.8, 1.1, 0.8], opacity: [0, 0.2, 0] }}
@@ -183,16 +183,18 @@ const CircularProgress = ({
   );
 };
 
-// Horizontal Progress Bar Component with Key Finding and Icons
+// Horizontal Progress Bar Component with Action Items and Modal Trigger
 const HorizontalProgressBar = ({
   score,
   label,
-  keyFinding,
+  actionItems = [],
+  onViewMore,
   delay = 0,
 }: {
   score: number;
   label: string;
-  keyFinding?: string;
+  actionItems?: string[];
+  onViewMore?: () => void;
   delay?: number;
 }) => {
   const getColor = (s: number) => {
@@ -201,32 +203,21 @@ const HorizontalProgressBar = ({
         bg: "bg-green-500",
         light: "bg-green-100",
         text: "text-green-600",
-        icon: CheckCircle2,
-        iconColor: "text-green-500",
       };
     if (s >= 70)
       return {
         bg: "bg-yellow-500",
         light: "bg-yellow-100",
         text: "text-yellow-600",
-        icon: AlertTriangle,
-        iconColor: "text-yellow-500",
       };
     return {
       bg: "bg-red-500",
       light: "bg-red-100",
       text: "text-red-600",
-      icon: AlertTriangle,
-      iconColor: "text-red-500",
     };
   };
 
   const colors = getColor(score);
-  const IconComponent = colors.icon;
-
-  // Parse key finding to determine icon type
-  const isPositive = keyFinding?.startsWith("✓");
-  const cleanKeyFinding = keyFinding?.replace(/^[✓⚠️]\s*/, "");
 
   return (
     <motion.div
@@ -273,25 +264,22 @@ const HorizontalProgressBar = ({
           />
         </motion.div>
       </div>
-      {keyFinding && (
+      {actionItems.length > 0 && (
         <motion.div
-          className="flex items-start gap-1.5 mt-2"
+          className="mt-2"
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: delay + 0.6 }}
         >
-          {isPositive ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-          ) : (
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 mt-0.5 flex-shrink-0" />
-          )}
-          <span
-            className={`text-xs ${
-              isPositive ? "text-gray-600" : "text-yellow-700"
-            } leading-relaxed`}
-          >
-            {cleanKeyFinding}
-          </span>
+          {/* First Action Item */}
+          <div className="flex items-start gap-1.5">
+            <Target className="w-3.5 h-3.5 text-brand-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <span className="text-xs text-gray-700 leading-relaxed">
+                {actionItems[0].replace(/^Executive Recommendation:\s*/i, "")}
+              </span>
+            </div>
+          </div>
         </motion.div>
       )}
     </motion.div>
@@ -315,7 +303,7 @@ const GradeBadge = ({
   return (
     <div
       className={`${getGradeColor(
-        grade
+        grade,
       )} text-white font-black rounded-2xl flex items-center justify-center shadow-lg ${
         size === "lg" ? "w-24 h-24 text-5xl" : "w-12 h-12 text-2xl"
       }`}
@@ -398,8 +386,8 @@ const Sidebar = ({
                 isActive
                   ? "text-brand-600"
                   : isCompleted
-                  ? "text-gray-800"
-                  : "text-gray-400 opacity-60"
+                    ? "text-gray-800"
+                    : "text-gray-400 opacity-60"
               }`}
             >
               {/* Icon container with fixed width for alignment */}
@@ -583,7 +571,7 @@ const WebsiteScanStage = memo(
     domain?: string;
   }) => {
     const [activeMessage, setActiveMessage] = useState(
-      "Initializing connection..."
+      "Initializing connection...",
     );
     const [floatingTags, setFloatingTags] = useState<
       { id: number; text: string; x: number; y: number }[]
@@ -610,7 +598,7 @@ const WebsiteScanStage = memo(
         "Validating accessibility features...",
         "Compiling results...",
       ],
-      []
+      [],
     );
 
     const tags = useMemo(
@@ -626,7 +614,7 @@ const WebsiteScanStage = memo(
         "Meta Tags OK",
         "Schema Valid",
       ],
-      []
+      [],
     );
 
     useEffect(() => {
@@ -936,7 +924,7 @@ const WebsiteScanStage = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 // Photos Analysis Sub-Stage Component with delayed mini cards
@@ -1228,7 +1216,7 @@ const GBPAnalysisStage = memo(
           if (next === 0 && !carouselCompletedRef.current) {
             carouselCompletedRef.current = true;
             console.log(
-              "Carousel cycle complete, stopping interval and calling onCarouselComplete"
+              "Carousel cycle complete, stopping interval and calling onCarouselComplete",
             );
             // Stop the interval - carousel is done
             if (intervalRef.current) {
@@ -1350,7 +1338,7 @@ const GBPAnalysisStage = memo(
                     }`}
                   />
                 </div>
-              )
+              ),
             )}
           </div>
         </div>
@@ -1575,7 +1563,7 @@ const GBPAnalysisStage = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 // 5. Competitor Map Stage with Google Maps Integration - Unmovable/Undraggable with deduplicated pins
@@ -1603,7 +1591,7 @@ const CompetitorMapStage = memo(
           typeof comp.location.lng === "number"
         ) {
           const key = `${comp.location.lat.toFixed(
-            4
+            4,
           )}_${comp.location.lng.toFixed(4)}`;
           if (!seen.has(key)) {
             seen.set(key, comp);
@@ -1685,7 +1673,7 @@ const CompetitorMapStage = memo(
       console.log(
         "Starting competitor reveal animation for",
         uniqueCompetitors.length,
-        "competitors"
+        "competitors",
       );
 
       // Clear any existing timeouts
@@ -1696,13 +1684,16 @@ const CompetitorMapStage = memo(
 
       // Create new timeouts
       uniqueCompetitors.forEach((_, i) => {
-        const timeout = setTimeout(() => {
-          setShowingCompetitors((prev) => {
-            if (prev.includes(i)) return prev;
-            console.log("Revealing competitor", i);
-            return [...prev, i];
-          });
-        }, 300 + i * 300); // Faster reveal: 300ms stagger
+        const timeout = setTimeout(
+          () => {
+            setShowingCompetitors((prev) => {
+              if (prev.includes(i)) return prev;
+              console.log("Revealing competitor", i);
+              return [...prev, i];
+            });
+          },
+          300 + i * 300,
+        ); // Faster reveal: 300ms stagger
         timeoutsRef.current.push(timeout);
       });
     }, [isLoading, competitorsKey, uniqueCompetitors.length]);
@@ -1777,7 +1768,7 @@ const CompetitorMapStage = memo(
             </span>
           </div>
         </div>
-      )
+      ),
     );
 
     return (
@@ -2009,7 +2000,7 @@ const CompetitorMapStage = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 // Card animation variants for staggered entrance
@@ -2028,6 +2019,150 @@ const cardVariants = {
   }),
 };
 
+// Helper function to parse score values (handle string or number)
+const parseScoreValue = (value: string | number | undefined): number => {
+  if (typeof value === "number") return Math.round(value);
+  if (typeof value === "string") return Math.round(parseFloat(value));
+  return 0;
+};
+
+// Action Items Modal Component - Shows pillars grouped with key findings and action items
+const ActionItemsModal = ({
+  isOpen,
+  onClose,
+  pillarCategory,
+  dataType,
+  websiteData,
+  gbpData,
+  competitorAnalysis,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  pillarCategory: string | null;
+  dataType: "website" | "gbp" | null;
+  websiteData: WebsiteAnalysis;
+  gbpData: GBPAnalysis;
+  competitorAnalysis: any | null;
+}) => {
+  if (!isOpen || !dataType) return null;
+
+  // Get ALL pillars from the selected data type
+  const pillars =
+    dataType === "website" ? websiteData.pillars : gbpData.pillars;
+
+  return (
+    <motion.div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 flex items-center justify-between z-10">
+          <div>
+            <h2 className="text-2xl font-bold">
+              {dataType === "gbp" ? "GBP Performance" : "Website Performance"}
+            </h2>
+            <p className="text-sm text-white/80 mt-1">
+              Detailed insights across {pillars.length} pillars
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content - Grouped by Pillar */}
+        <div className="p-6 space-y-6">
+          {pillars.map((pillar, pillarIdx) => (
+            <motion.div
+              key={pillarIdx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: pillarIdx * 0.1 }}
+              className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200 p-6 shadow-sm"
+            >
+              {/* Pillar Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {pillar.category}
+                </h3>
+                <span
+                  className={`px-3 py-1 text-sm font-bold rounded-full ${
+                    Number(pillar.score) >= 90
+                      ? "bg-green-100 text-green-700"
+                      : Number(pillar.score) >= 70
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {pillar.score}%
+                </span>
+              </div>
+
+              {/* Key Finding - No card wrapper */}
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {pillar.key_finding}
+                </p>
+              </div>
+
+              {/* Action Items (if any) */}
+              {pillar.action_items && pillar.action_items.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="w-4 h-4 text-brand-500" />
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Action Items
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {pillar.action_items.map((item, itemIdx) => (
+                      <div
+                        key={itemIdx}
+                        className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-brand-300 hover:bg-brand-50/30 transition-colors"
+                      >
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white">
+                            {itemIdx + 1}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-700 leading-relaxed pt-0.5">
+                          {item.replace(/^Executive Recommendation:\s*/i, "")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+
+          {/* Close Button */}
+          <motion.button
+            onClick={onClose}
+            className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-4 rounded-lg transition-all"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Close
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // 6. Dashboard Stage (Final) - Enhanced with Animations and Redesigned Layout
 const DashboardStage = ({
   business,
@@ -2040,33 +2175,42 @@ const DashboardStage = ({
   gbpData: GBPAnalysis;
   screenshotUrl?: string;
 }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPillarCategory, setSelectedPillarCategory] = useState<
+    string | null
+  >(null);
+  const [selectedDataType, setSelectedDataType] = useState<
+    "website" | "gbp" | null
+  >(null);
   // Find the competitor with most reviews for comparison
   const topCompetitor = MOCK_COMPETITORS.reduce(
     (max, comp) => (comp.reviewsCount > max.reviewsCount ? comp : max),
-    MOCK_COMPETITORS[0]
+    MOCK_COMPETITORS[0],
   );
 
   const reviewGap = topCompetitor.reviewsCount - business.reviewsCount;
 
-  // Key findings for each metric - mix of positive and areas needing improvement
-  const gbpKeyFindings: Record<string, string> = {
-    "Profile Integrity": "✓ Excellent NAP consistency across all platforms",
-    "Trust & Engagement": "⚠️ Critical: 763-review gap vs top competitor",
-    "Visual Authority": "✓ Strong visual presence with quality photos",
-    "Search Conversion": "⚠️ Posts lack strategic keyword targeting",
-    "Competitor Analysis": "⚠️ Ranking #4 in local pack, losing market share",
-  };
-
-  const websiteKeyFindings: Record<string, string> = {
-    "Trust & Authority":
-      "⚠️ Missing testimonials & video content on landing pages",
-    Accessibility: "✓ Excellent mobile responsiveness & ADA compliance",
-    "Patient Journey": "⚠️ No online booking integration detected",
-    "Technical Reliability": "✓ Fast load time & excellent Core Web Vitals",
-  };
-
   return (
     <div className="h-full overflow-y-auto bg-gray-100">
+      {/* Action Items Modal */}
+      <AnimatePresence>
+        {modalOpen && (
+          <ActionItemsModal
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              setSelectedPillarCategory(null);
+              setSelectedDataType(null);
+            }}
+            pillarCategory={selectedPillarCategory}
+            dataType={selectedDataType}
+            websiteData={websiteData}
+            gbpData={gbpData}
+            competitorAnalysis={gbpData.competitor_analysis}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Top Paywall Banner - Alloro Orange with Markety AI Verbiage */}
       <motion.div
         className="bg-brand-500 text-white py-4 px-6 relative overflow-hidden"
@@ -2232,79 +2376,12 @@ const DashboardStage = ({
           </div>
         </motion.div>
 
-        {/* Overall Grades Section - Enhanced with Animated Circular Progress */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* GBP Grade */}
-          <motion.div
-            className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 overflow-hidden relative"
-            custom={1}
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover={{
-              scale: 1.02,
-              boxShadow: "0 20px 50px rgba(214,104,83,0.15)",
-              transition: { duration: 0.3 },
-            }}
-          >
-            {/* Animated gradient background */}
-            <motion.div
-              className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-brand-200 to-brand-100 rounded-full opacity-50"
-              animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
-              transition={{ duration: 8, repeat: Infinity }}
-            />
-            <motion.div
-              className="absolute -bottom-10 -left-10 w-24 h-24 bg-brand-100 rounded-full opacity-30"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 5, repeat: Infinity, delay: 1 }}
-            />
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <motion.div
-                className="p-2 bg-brand-100 rounded-lg"
-                whileHover={{ rotate: 10 }}
-              >
-                <MapPin className="w-5 h-5 text-brand-500" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-gray-700">
-                Google Business Profile Grade
-              </h3>
-            </div>
-            <div className="flex items-center gap-6 relative z-10">
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{
-                  duration: 1,
-                  delay: 0.5,
-                  type: "spring",
-                  stiffness: 80,
-                }}
-              >
-                <GradeBadge grade={gbpData.gbp_grade} />
-              </motion.div>
-              <div className="flex-1 flex items-center justify-center gap-6">
-                <CircularProgress
-                  score={gbpData.gbp_readiness_score}
-                  label="Readiness Score"
-                  size={100}
-                  strokeWidth={8}
-                  delay={0.6}
-                />
-                <CircularProgress
-                  score={gbpData.sync_audit.nap_match ? 100 : 85}
-                  label="NAP Consistency"
-                  size={100}
-                  strokeWidth={8}
-                  delay={0.8}
-                />
-              </div>
-            </div>
-          </motion.div>
-
+        {/* Overall Grades Section - Enhanced with Animated Circular Progress - 3 Column */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Website Grade */}
           <motion.div
             className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 overflow-hidden relative"
-            custom={2}
+            custom={1}
             variants={cardVariants}
             initial="hidden"
             animate="visible"
@@ -2332,7 +2409,7 @@ const DashboardStage = ({
               >
                 <Globe className="w-5 h-5 text-blue-500" />
               </motion.div>
-              <h3 className="text-lg font-bold text-gray-700">
+              <h3 className="text-sm font-bold text-gray-700">
                 Website Performance Grade
               </h3>
             </div>
@@ -2349,7 +2426,7 @@ const DashboardStage = ({
               >
                 <GradeBadge grade={websiteData.overall_grade} />
               </motion.div>
-              <div className="flex-1 flex items-center justify-center gap-6">
+              <div className="flex-1 flex items-center justify-center">
                 <CircularProgress
                   score={Math.round(websiteData.overall_score)}
                   label="Overall Score"
@@ -2357,27 +2434,206 @@ const DashboardStage = ({
                   strokeWidth={8}
                   delay={0.7}
                 />
-                <motion.div
-                  className="flex flex-col items-center"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1.2, type: "spring" }}
-                >
-                  <motion.div
-                    className="text-3xl font-black text-green-500"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    2.1s
-                  </motion.div>
-                  <span className="mt-2 text-[10px] font-semibold text-gray-500 text-center uppercase tracking-wide">
-                    Load Time
-                  </span>
-                </motion.div>
               </div>
             </div>
           </motion.div>
+
+          {/* GBP Grade */}
+          <motion.div
+            className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 overflow-hidden relative"
+            custom={2}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{
+              scale: 1.02,
+              boxShadow: "0 20px 50px rgba(214,104,83,0.15)",
+              transition: { duration: 0.3 },
+            }}
+          >
+            {/* Animated gradient background */}
+            <motion.div
+              className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-brand-200 to-brand-100 rounded-full opacity-50"
+              animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+              transition={{ duration: 8, repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute -bottom-10 -left-10 w-24 h-24 bg-brand-100 rounded-full opacity-30"
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 5, repeat: Infinity, delay: 1 }}
+            />
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <motion.div
+                className="p-2 bg-brand-100 rounded-lg"
+                whileHover={{ rotate: 10 }}
+              >
+                <MapPin className="w-5 h-5 text-brand-500" />
+              </motion.div>
+              <h3 className="text-sm font-bold text-gray-700">
+                Google Business Profile Grade
+              </h3>
+            </div>
+            <div className="flex items-center gap-6 relative z-10">
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{
+                  duration: 1,
+                  delay: 0.5,
+                  type: "spring",
+                  stiffness: 80,
+                }}
+              >
+                <GradeBadge grade={gbpData.gbp_grade} />
+              </motion.div>
+              <div className="flex-1 flex items-center justify-center">
+                <CircularProgress
+                  score={parseScoreValue(gbpData.gbp_readiness_score)}
+                  label="Readiness Score"
+                  size={100}
+                  strokeWidth={8}
+                  delay={0.6}
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Local Ranking Grade */}
+          {gbpData.competitor_analysis && (
+            <motion.div
+              className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 overflow-hidden relative"
+              custom={3}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{
+                scale: 1.02,
+                boxShadow: "0 20px 50px rgba(214,104,83,0.15)",
+                transition: { duration: 0.3 },
+              }}
+            >
+              {/* Animated gradient background - Orange */}
+              <motion.div
+                className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-brand-200 to-brand-100 rounded-full opacity-50"
+                animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+                transition={{ duration: 8, repeat: Infinity, delay: 1 }}
+              />
+              <motion.div
+                className="absolute -bottom-10 -left-10 w-24 h-24 bg-brand-100 rounded-full opacity-30"
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 5, repeat: Infinity, delay: 2 }}
+              />
+              <div className="flex items-center gap-2 mb-6 relative z-10">
+                <motion.div
+                  className="p-2 bg-brand-100 rounded-lg"
+                  whileHover={{ rotate: 10 }}
+                >
+                  <TrendingUp className="w-5 h-5 text-brand-500" />
+                </motion.div>
+                <h3 className="text-sm font-bold text-gray-700">
+                  Local Ranking
+                </h3>
+              </div>
+              <div className="flex items-center gap-6 relative z-10">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{
+                    duration: 1,
+                    delay: 0.7,
+                    type: "spring",
+                    stiffness: 80,
+                  }}
+                >
+                  <GradeBadge grade={gbpData.competitor_analysis.rank_grade} />
+                </motion.div>
+                <div className="flex-1 flex items-center justify-center">
+                  <CircularProgress
+                    score={parseScoreValue(
+                      gbpData.competitor_analysis.rank_score,
+                    )}
+                    label="Rank Score"
+                    size={100}
+                    strokeWidth={8}
+                    delay={0.8}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
+
+        {/* Local Ranking Insights Card - Orange Gradient with White Content */}
+        {gbpData.competitor_analysis && (
+          <motion.div
+            className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg p-6 md:p-8 mb-8 overflow-hidden relative"
+            custom={4}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <div className="flex items-start gap-4 mb-6 relative z-10">
+              <motion.div
+                className="p-3 bg-white/20 backdrop-blur-sm rounded-xl"
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                <Users className="w-6 h-6 text-white" />
+              </motion.div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">
+                  Local Ranking Insights
+                </h3>
+                <p className="text-sm text-white/80 mt-0.5">
+                  Competitive positioning & market analysis
+                </p>
+              </div>
+            </div>
+
+            {/* Key Findings - White text */}
+            <motion.div
+              className="mb-6 relative z-10"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+            >
+              <p className="text-md leading-relaxed text-white">
+                {gbpData.competitor_analysis.key_findings}
+              </p>
+            </motion.div>
+
+            {/* Top Action Items - White Cards */}
+            <div className="relative z-10">
+              <span className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3 block">
+                Top Recommendations
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {gbpData.competitor_analysis.top_action_items.map(
+                  (item, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
+                      className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">
+                            {idx + 1}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-gray-700 pt-0.5">
+                          {item}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ),
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* GBP Performance Metrics - Horizontal Progress Bars */}
         <motion.div
@@ -2398,29 +2654,51 @@ const DashboardStage = ({
             }}
           />
 
-          <div className="flex items-center gap-3 mb-8 relative z-10">
-            <motion.div
-              className="p-2.5 bg-brand-100 rounded-xl"
-              whileHover={{ scale: 1.1, rotate: 5 }}
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div className="flex items-center gap-3">
+              <motion.div
+                className="p-2.5 bg-brand-100 rounded-xl"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+              >
+                <MapPin className="w-5 h-5 text-brand-500" />
+              </motion.div>
+              <h3 className="text-xl font-bold text-gray-800">
+                GBP Performance Metrics
+              </h3>
+            </div>
+            <motion.button
+              onClick={() => {
+                setSelectedPillarCategory(null);
+                setSelectedDataType("gbp");
+                setModalOpen(true);
+              }}
+              className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <MapPin className="w-5 h-5 text-brand-500" />
-            </motion.div>
-            <h3 className="text-xl font-bold text-gray-800">
-              GBP Performance Metrics
-            </h3>
+              See Partial Insights
+              <ArrowRight className="w-4 h-4" />
+            </motion.button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
-            {gbpData.pillars.map((pillar, idx) => (
-              <div key={idx}>
-                <HorizontalProgressBar
-                  score={Number(pillar.score)}
-                  label={pillar.category}
-                  keyFinding={gbpKeyFindings[pillar.category]}
-                  delay={0.6 + idx * 0.12}
-                />
-              </div>
-            ))}
+            {[...gbpData.pillars]
+              .sort((a, b) => Number(a.score) - Number(b.score))
+              .map((pillar, idx) => (
+                <div key={idx}>
+                  <HorizontalProgressBar
+                    score={Number(pillar.score)}
+                    label={pillar.category}
+                    actionItems={pillar.action_items || []}
+                    onViewMore={() => {
+                      setSelectedPillarCategory(pillar.category);
+                      setSelectedDataType("gbp");
+                      setModalOpen(true);
+                    }}
+                    delay={0.6 + idx * 0.12}
+                  />
+                </div>
+              ))}
           </div>
         </motion.div>
 
@@ -2443,29 +2721,51 @@ const DashboardStage = ({
             }}
           />
 
-          <div className="flex items-center gap-3 mb-8 relative z-10">
-            <motion.div
-              className="p-2.5 bg-blue-100 rounded-xl"
-              whileHover={{ scale: 1.1, rotate: -5 }}
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div className="flex items-center gap-3">
+              <motion.div
+                className="p-2.5 bg-blue-100 rounded-xl"
+                whileHover={{ scale: 1.1, rotate: -5 }}
+              >
+                <Globe className="w-5 h-5 text-blue-500" />
+              </motion.div>
+              <h3 className="text-xl font-bold text-gray-800">
+                Website Performance Metrics
+              </h3>
+            </div>
+            <motion.button
+              onClick={() => {
+                setSelectedPillarCategory(null);
+                setSelectedDataType("website");
+                setModalOpen(true);
+              }}
+              className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Globe className="w-5 h-5 text-blue-500" />
-            </motion.div>
-            <h3 className="text-xl font-bold text-gray-800">
-              Website Performance Metrics
-            </h3>
+              See Partial Insights
+              <ArrowRight className="w-4 h-4" />
+            </motion.button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
-            {websiteData.pillars.map((pillar, idx) => (
-              <div key={idx}>
-                <HorizontalProgressBar
-                  score={Number(pillar.score)}
-                  label={pillar.category}
-                  keyFinding={websiteKeyFindings[pillar.category]}
-                  delay={0.7 + idx * 0.12}
-                />
-              </div>
-            ))}
+            {[...websiteData.pillars]
+              .sort((a, b) => Number(a.score) - Number(b.score))
+              .map((pillar, idx) => (
+                <div key={idx}>
+                  <HorizontalProgressBar
+                    score={Number(pillar.score)}
+                    label={pillar.category}
+                    actionItems={pillar.action_items || []}
+                    onViewMore={() => {
+                      setSelectedPillarCategory(pillar.category);
+                      setSelectedDataType("website");
+                      setModalOpen(true);
+                    }}
+                    delay={0.7 + idx * 0.12}
+                  />
+                </div>
+              ))}
           </div>
         </motion.div>
 
@@ -2643,7 +2943,7 @@ const App = () => {
   const handleGbpCarouselComplete = () => {
     console.log(
       "handleGbpCarouselComplete called, pendingStage:",
-      pendingStage
+      pendingStage,
     );
     setGbpCarouselComplete(true);
   };
@@ -2692,7 +2992,7 @@ const App = () => {
     ) {
       console.log(
         "Carousel complete, transitioning to pending stage:",
-        pendingStage
+        pendingStage,
       );
       setStage(pendingStage);
       setPendingStage(null);
@@ -2751,27 +3051,27 @@ const App = () => {
   // Memoize to prevent unnecessary re-renders of child components
   const screenshotDesktop = useMemo(
     () => auditData?.screenshots?.desktop_url || MOCK_SCREENSHOT_DESKTOP,
-    [auditData?.screenshots?.desktop_url]
+    [auditData?.screenshots?.desktop_url],
   );
   const screenshotMobile = useMemo(
     () => auditData?.screenshots?.mobile_url || MOCK_SCREENSHOT_MOBILE,
-    [auditData?.screenshots?.mobile_url]
+    [auditData?.screenshots?.mobile_url],
   );
   const businessData = useMemo(
     () => auditData?.self_gbp || MOCK_BUSINESS,
-    [auditData?.self_gbp]
+    [auditData?.self_gbp],
   );
   const competitorData = useMemo(
     () => auditData?.competitors || MOCK_COMPETITORS,
-    [auditData?.competitors]
+    [auditData?.competitors],
   );
   const websiteAnalysis = useMemo(
     () => auditData?.website_analysis || MOCK_WEBSITE_ANALYSIS,
-    [auditData?.website_analysis]
+    [auditData?.website_analysis],
   );
   const gbpAnalysis = useMemo(
     () => auditData?.gbp_analysis || MOCK_GBP_ANALYSIS,
-    [auditData?.gbp_analysis]
+    [auditData?.gbp_analysis],
   );
 
   return (

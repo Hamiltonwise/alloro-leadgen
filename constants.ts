@@ -797,6 +797,22 @@ export const MOCK_GBP_ANALYSIS: GBPAnalysis = {
     ],
     trust_gap_severity: "Low",
   },
+  competitor_analysis: {
+    rank_score: "55",
+    rank_grade: "D",
+    key_findings:
+      "Garrison Orthodontics has a commanding 5.0 rating but is severely undercut in market scale. The market leader, My Orthodontist (398 reviews), boasts 6.4 times the client's review volume, indicating a critical gap in established digital authority.",
+    top_action_items: [
+      "Launch an aggressive review generation campaign targeting 10+ new reviews monthly",
+      "Implement continuous photo uploading strategy to reach 100+ images",
+      "Personalize owner responses with high-value service keywords",
+    ],
+  },
+  top_action_items: [
+    "Launch an aggressive review generation campaign targeting a minimum of 10 new 5-star reviews monthly to rapidly close the volume gap against key local competitors.",
+    "Implement a continuous photo uploading strategy focusing on patient experience, staff profiles, and clinical results to reach 100+ images and match visual market density.",
+    "Ensure all owner responses to reviews are personalized and strategically incorporate high-value service keywords.",
+  ],
   pillars: [
     {
       category: "Profile Integrity",

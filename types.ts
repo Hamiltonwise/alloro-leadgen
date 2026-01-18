@@ -166,15 +166,24 @@ export interface WebsiteAnalysis {
   pillars: AnalysisPillar[];
 }
 
+export interface CompetitorAnalysisData {
+  rank_score: string | number;
+  rank_grade: string;
+  key_findings: string;
+  top_action_items: string[];
+}
+
 export interface GBPAnalysis {
-  gbp_readiness_score: number;
+  gbp_readiness_score: number | string;
   gbp_grade: string;
   sync_audit: {
-    nap_match: boolean;
+    nap_match: boolean | string;
     mismatched_fields: string[];
     trust_gap_severity: string;
   };
+  competitor_analysis?: CompetitorAnalysisData;
   pillars: AnalysisPillar[];
+  top_action_items?: string[];
 }
 
 export interface AnalysisPillar {
