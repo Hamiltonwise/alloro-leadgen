@@ -44,6 +44,8 @@ import {
 import { GBPSearchSelect } from "./GBPSearchSelect";
 import { useAuditPolling } from "./useAuditPolling";
 import { API_BASE_URL } from "./utils/config";
+import { EmailPaywallOverlay } from "./EmailPaywallOverlay";
+import { sendAuditReportEmail } from "./utils/emailService";
 
 // --- COMPONENTS ---
 
@@ -273,7 +275,7 @@ const HorizontalProgressBar = ({
         >
           {/* First Action Item */}
           <div className="flex items-start gap-1.5">
-            <Target className="w-3.5 h-3.5 text-brand-500 mt-0.5 flex-shrink-0" />
+            <Target className="w-3.5 h-3.5 text-brand-500 mt-[6px] flex-shrink-0" />
             <div className="flex-1">
               <span className="text-xs text-gray-700 leading-relaxed">
                 {actionItems[0].replace(/^Executive Recommendation:\s*/i, "")}
@@ -2169,11 +2171,17 @@ const DashboardStage = ({
   websiteData,
   gbpData,
   screenshotUrl,
+  auditId,
+  emailSubmitted,
+  onEmailSubmitted,
 }: {
   business: BusinessProfile;
   websiteData: WebsiteAnalysis;
   gbpData: GBPAnalysis;
   screenshotUrl?: string;
+  auditId?: string | null;
+  emailSubmitted: boolean;
+  onEmailSubmitted: () => void;
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPillarCategory, setSelectedPillarCategory] = useState<
@@ -2182,6 +2190,7 @@ const DashboardStage = ({
   const [selectedDataType, setSelectedDataType] = useState<
     "website" | "gbp" | null
   >(null);
+
   // Find the competitor with most reviews for comparison
   const topCompetitor = MOCK_COMPETITORS.reduce(
     (max, comp) => (comp.reviewsCount > max.reviewsCount ? comp : max),
@@ -2189,6 +2198,27 @@ const DashboardStage = ({
   );
 
   const reviewGap = topCompetitor.reviewsCount - business.reviewsCount;
+
+  // Handle email submission
+  const handleEmailSubmit = async (email: string) => {
+    if (!auditId) {
+      throw new Error("Audit ID not available");
+    }
+
+    await sendAuditReportEmail({
+      recipientEmail: email,
+      auditId: auditId,
+      businessName: business.title,
+    });
+
+    // Mark email as submitted - parent component will handle this via callback
+    onEmailSubmitted();
+
+    // Update URL with audit_id for persistence
+    const url = new URL(window.location.href);
+    url.searchParams.set("audit_id", auditId);
+    window.history.pushState({}, "", url.toString());
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-gray-100">
@@ -2248,7 +2278,10 @@ const DashboardStage = ({
               </p>
             </div>
           </div>
-          <motion.button
+          <motion.a
+            href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+            target="_blank"
+            rel="noopener noreferrer"
             className="bg-white text-brand-600 hover:bg-gray-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -2256,7 +2289,7 @@ const DashboardStage = ({
             <Phone className="w-4 h-4" />
             Schedule Strategy Call
             <ArrowRight className="w-4 h-4" />
-          </motion.button>
+          </motion.a>
         </div>
       </motion.div>
 
@@ -2563,358 +2596,378 @@ const DashboardStage = ({
           )}
         </div>
 
-        {/* Local Ranking Insights Card - Orange Gradient with White Content */}
-        {gbpData.competitor_analysis && (
-          <motion.div
-            className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg p-6 md:p-8 mb-8 overflow-hidden relative"
-            custom={4}
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <div className="flex items-start gap-4 mb-6 relative z-10">
-              <motion.div
-                className="p-3 bg-white/20 backdrop-blur-sm rounded-xl"
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity }}
-              >
-                <Users className="w-6 h-6 text-white" />
-              </motion.div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white">
-                  Local Ranking Insights
-                </h3>
-                <p className="text-sm text-white/80 mt-0.5">
-                  Competitive positioning & market analysis
-                </p>
-              </div>
-            </div>
-
-            {/* Key Findings - White text */}
-            <motion.div
-              className="mb-6 relative z-10"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
-              <p className="text-md leading-relaxed text-white">
-                {gbpData.competitor_analysis.key_findings}
-              </p>
-            </motion.div>
-
-            {/* Top Action Items - White Cards */}
-            <div className="relative z-10">
-              <span className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3 block">
-                Top Recommendations
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {gbpData.competitor_analysis.top_action_items.map(
-                  (item, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
-                      className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
-                          <span className="text-xs font-bold text-white">
-                            {idx + 1}
-                          </span>
-                        </div>
-                        <p className="text-xs leading-relaxed text-gray-700 pt-0.5">
-                          {item}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ),
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* GBP Performance Metrics - Horizontal Progress Bars */}
-        <motion.div
-          className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
-          custom={3}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover={{ boxShadow: "0 15px 50px rgba(214,104,83,0.12)" }}
-        >
-          {/* Subtle pattern background */}
-          <div
-            className="absolute inset-0 opacity-[0.02]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, #D66853 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <div className="flex items-center gap-3">
-              <motion.div
-                className="p-2.5 bg-brand-100 rounded-xl"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-              >
-                <MapPin className="w-5 h-5 text-brand-500" />
-              </motion.div>
-              <h3 className="text-xl font-bold text-gray-800">
-                GBP Performance Metrics
-              </h3>
-            </div>
-            <motion.button
-              onClick={() => {
-                setSelectedPillarCategory(null);
-                setSelectedDataType("gbp");
-                setModalOpen(true);
-              }}
-              className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              See Partial Insights
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
-            {[...gbpData.pillars]
-              .sort((a, b) => Number(a.score) - Number(b.score))
-              .map((pillar, idx) => (
-                <div key={idx}>
-                  <HorizontalProgressBar
-                    score={Number(pillar.score)}
-                    label={pillar.category}
-                    actionItems={pillar.action_items || []}
-                    onViewMore={() => {
-                      setSelectedPillarCategory(pillar.category);
-                      setSelectedDataType("gbp");
-                      setModalOpen(true);
-                    }}
-                    delay={0.6 + idx * 0.12}
-                  />
-                </div>
-              ))}
-          </div>
-        </motion.div>
-
-        {/* Website Performance Metrics - Horizontal Progress Bars */}
-        <motion.div
-          className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
-          custom={4}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-          whileHover={{ boxShadow: "0 15px 50px rgba(59,130,246,0.12)" }}
-        >
-          {/* Subtle pattern background */}
-          <div
-            className="absolute inset-0 opacity-[0.02]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, #3B82F6 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <div className="flex items-center gap-3">
-              <motion.div
-                className="p-2.5 bg-blue-100 rounded-xl"
-                whileHover={{ scale: 1.1, rotate: -5 }}
-              >
-                <Globe className="w-5 h-5 text-blue-500" />
-              </motion.div>
-              <h3 className="text-xl font-bold text-gray-800">
-                Website Performance Metrics
-              </h3>
-            </div>
-            <motion.button
-              onClick={() => {
-                setSelectedPillarCategory(null);
-                setSelectedDataType("website");
-                setModalOpen(true);
-              }}
-              className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              See Partial Insights
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
-            {[...websiteData.pillars]
-              .sort((a, b) => Number(a.score) - Number(b.score))
-              .map((pillar, idx) => (
-                <div key={idx}>
-                  <HorizontalProgressBar
-                    score={Number(pillar.score)}
-                    label={pillar.category}
-                    actionItems={pillar.action_items || []}
-                    onViewMore={() => {
-                      setSelectedPillarCategory(pillar.category);
-                      setSelectedDataType("website");
-                      setModalOpen(true);
-                    }}
-                    delay={0.7 + idx * 0.12}
-                  />
-                </div>
-              ))}
-          </div>
-        </motion.div>
-
-        {/* Blurred Detailed Analysis - Paywall */}
+        {/* Email Paywall Wrapper - Content below 3-column cards */}
         <div className="relative">
-          {/* Blurred Content */}
-          <div className="blur-sm select-none pointer-events-none">
-            {/* Detailed GBP Analysis */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">
-                Detailed GBP Analysis
-              </h3>
-              <div className="space-y-6">
-                {gbpData.pillars.map((pillar, idx) => (
-                  <div
-                    key={idx}
-                    className="border-b border-gray-100 pb-6 last:border-0"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="font-bold text-gray-900">
-                        {pillar.category}
-                      </h4>
-                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                        {pillar.score}%
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-3">
-                      {pillar.key_finding}
-                    </p>
-                    <div className="bg-brand-50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-4 h-4 text-brand-600" />
-                        <span className="text-sm font-bold text-brand-800">
-                          Recommendation
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {pillar.executive_recommendation}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Detailed Website Analysis */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">
-                Detailed Website Analysis
-              </h3>
-              <div className="space-y-6">
-                {websiteData.pillars.map((pillar, idx) => (
-                  <div
-                    key={idx}
-                    className="border-b border-gray-100 pb-6 last:border-0"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="font-bold text-gray-900">
-                        {pillar.category}
-                      </h4>
-                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                        {pillar.score}%
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-sm">
-                      {pillar.key_finding}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Items */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">
-                30-Day Action Plan
-              </h3>
-              <div className="space-y-4">
-                {[
-                  "Implement review generation campaign to close the gap",
-                  "Optimize GBP posts for weekend availability keywords",
-                  "Add 5 new high-quality photos monthly",
-                  "Set up automated review response system",
-                  "Create location-specific landing pages",
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                      {idx + 1}
-                    </div>
-                    <span className="text-gray-700">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Paywall Overlay - Simplified Dark Card with Single CTA */}
-          <div className="absolute inset-0 flex items-start justify-center pt-16 bg-gradient-to-b from-transparent via-white/90 to-white">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 30 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.6,
-                delay: 0.8,
-                type: "spring",
-                stiffness: 100,
-              }}
-              className="bg-gray-900 text-white p-5 md:p-6 rounded-2xl shadow-2xl text-center max-w-sm mx-4 relative overflow-hidden"
-            >
-              {/* Animated background glow */}
+          {/* Content to be blurred when email not submitted */}
+          <div
+            className={
+              emailSubmitted ? "" : "blur-md select-none pointer-events-none"
+            }
+          >
+            {/* Local Ranking Insights Card - Orange Gradient with White Content */}
+            {gbpData.competitor_analysis && (
               <motion.div
-                className="absolute -inset-1 bg-brand-500/20 blur-xl"
-                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
-                transition={{ duration: 3, repeat: Infinity }}
+                className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg p-6 md:p-8 mb-8 overflow-hidden relative"
+                custom={4}
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <div className="flex items-start gap-4 mb-6 relative z-10">
+                  <motion.div
+                    className="p-3 bg-white/20 backdrop-blur-sm rounded-xl"
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <Users className="w-6 h-6 text-white" />
+                  </motion.div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-white">
+                      Local Ranking Insights
+                    </h3>
+                    <p className="text-sm text-white/80 mt-0.5">
+                      Competitive positioning & market analysis
+                    </p>
+                  </div>
+                </div>
+
+                {/* Key Findings - White text */}
+                <motion.div
+                  className="mb-6 relative z-10"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                >
+                  <p className="text-md leading-relaxed text-white">
+                    {gbpData.competitor_analysis.key_findings}
+                  </p>
+                </motion.div>
+
+                {/* Top Action Items - White Cards */}
+                <div className="relative z-10">
+                  <span className="text-xs font-bold text-white/90 uppercase tracking-wider mb-3 block">
+                    Top Recommendations
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {gbpData.competitor_analysis.top_action_items.map(
+                      (item, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
+                          className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
+                              <span className="text-xs font-bold text-white">
+                                {idx + 1}
+                              </span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-gray-700 pt-0.5">
+                              {item}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* GBP Performance Metrics - Horizontal Progress Bars */}
+            <motion.div
+              className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
+              custom={3}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{ boxShadow: "0 15px 50px rgba(214,104,83,0.12)" }}
+            >
+              {/* Subtle pattern background */}
+              <div
+                className="absolute inset-0 opacity-[0.02]"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle, #D66853 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
               />
 
-              <div className="relative z-10">
-                <motion.div
-                  className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center mx-auto mb-3"
-                  animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  <Lock className="w-5 h-5 text-white" />
-                </motion.div>
-                <h2 className="text-lg font-bold mb-1">
-                  Unlock Your Complete Alloro Growth Plan
-                </h2>
-                <p className="text-gray-400 mb-4 text-xs leading-relaxed">
-                  Get AI-powered recommendations, your personalized 30-day
-                  action plan, and strategies to close the {reviewGap} review
-                  gap.
-                </p>
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="p-2.5 bg-brand-100 rounded-xl"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <MapPin className="w-5 h-5 text-brand-500" />
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    GBP Performance Metrics
+                  </h3>
+                </div>
                 <motion.button
-                  className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 px-5 rounded-lg transition-all shadow-lg text-sm flex items-center justify-center gap-2"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setSelectedPillarCategory(null);
+                    setSelectedDataType("gbp");
+                    setModalOpen(true);
+                  }}
+                  className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Phone className="w-4 h-4" />
-                  Book Strategy Call
+                  See Full Insights
+                  <ArrowRight className="w-4 h-4" />
                 </motion.button>
-                <p className="text-[10px] text-gray-500 mt-3">
-                  100% Free • No Credit Card Required
-                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
+                {[...gbpData.pillars]
+                  .sort((a, b) => Number(a.score) - Number(b.score))
+                  .map((pillar, idx) => (
+                    <div key={idx}>
+                      <HorizontalProgressBar
+                        score={Number(pillar.score)}
+                        label={pillar.category}
+                        actionItems={pillar.action_items || []}
+                        onViewMore={() => {
+                          setSelectedPillarCategory(pillar.category);
+                          setSelectedDataType("gbp");
+                          setModalOpen(true);
+                        }}
+                        delay={0.6 + idx * 0.12}
+                      />
+                    </div>
+                  ))}
               </div>
             </motion.div>
+
+            {/* Website Performance Metrics - Horizontal Progress Bars */}
+            <motion.div
+              className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative"
+              custom={4}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{ boxShadow: "0 15px 50px rgba(59,130,246,0.12)" }}
+            >
+              {/* Subtle pattern background */}
+              <div
+                className="absolute inset-0 opacity-[0.02]"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle, #3B82F6 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
+              />
+
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="p-2.5 bg-blue-100 rounded-xl"
+                    whileHover={{ scale: 1.1, rotate: -5 }}
+                  >
+                    <Globe className="w-5 h-5 text-blue-500" />
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    Website Performance Metrics
+                  </h3>
+                </div>
+                <motion.button
+                  onClick={() => {
+                    setSelectedPillarCategory(null);
+                    setSelectedDataType("website");
+                    setModalOpen(true);
+                  }}
+                  className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  See Full Insights
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative z-10">
+                {[...websiteData.pillars]
+                  .sort((a, b) => Number(a.score) - Number(b.score))
+                  .map((pillar, idx) => (
+                    <div key={idx}>
+                      <HorizontalProgressBar
+                        score={Number(pillar.score)}
+                        label={pillar.category}
+                        actionItems={pillar.action_items || []}
+                        onViewMore={() => {
+                          setSelectedPillarCategory(pillar.category);
+                          setSelectedDataType("website");
+                          setModalOpen(true);
+                        }}
+                        delay={0.7 + idx * 0.12}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </motion.div>
+
+            {/* Blurred Detailed Analysis - Paywall */}
+            <div className="relative">
+              {/* Blurred Content */}
+              <div className="blur-sm select-none pointer-events-none">
+                {/* Detailed GBP Analysis */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">
+                    Detailed GBP Analysis
+                  </h3>
+                  <div className="space-y-6">
+                    {gbpData.pillars.map((pillar, idx) => (
+                      <div
+                        key={idx}
+                        className="border-b border-gray-100 pb-6 last:border-0"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-gray-900">
+                            {pillar.category}
+                          </h4>
+                          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                            {pillar.score}%
+                          </span>
+                        </div>
+                        <p className="text-gray-600 text-sm mb-3">
+                          {pillar.key_finding}
+                        </p>
+                        <div className="bg-brand-50 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Target className="w-4 h-4 text-brand-600" />
+                            <span className="text-sm font-bold text-brand-800">
+                              Recommendation
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            {pillar.executive_recommendation}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detailed Website Analysis */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">
+                    Detailed Website Analysis
+                  </h3>
+                  <div className="space-y-6">
+                    {websiteData.pillars.map((pillar, idx) => (
+                      <div
+                        key={idx}
+                        className="border-b border-gray-100 pb-6 last:border-0"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-gray-900">
+                            {pillar.category}
+                          </h4>
+                          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                            {pillar.score}%
+                          </span>
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                          {pillar.key_finding}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Items */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
+                  <h3 className="text-xl font-bold text-gray-800 mb-6">
+                    30-Day Action Plan
+                  </h3>
+                  <div className="space-y-4">
+                    {[
+                      "Implement review generation campaign to close the gap",
+                      "Optimize GBP posts for weekend availability keywords",
+                      "Add 5 new high-quality photos monthly",
+                      "Set up automated review response system",
+                      "Create location-specific landing pages",
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {idx + 1}
+                        </div>
+                        <span className="text-gray-700">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Paywall Overlay - Simplified Dark Card with Single CTA */}
+              <div className="absolute inset-0 flex items-start justify-center pt-16 bg-gradient-to-b from-transparent via-white/90 to-white">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.6,
+                    delay: 0.8,
+                    type: "spring",
+                    stiffness: 100,
+                  }}
+                  className="bg-gray-900 text-white p-5 md:p-6 rounded-2xl shadow-2xl text-center max-w-sm mx-4 relative overflow-hidden"
+                >
+                  {/* Animated background glow */}
+                  <motion.div
+                    className="absolute -inset-1 bg-brand-500/20 blur-xl"
+                    animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  />
+
+                  <div className="relative z-10">
+                    <motion.div
+                      className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center mx-auto mb-3"
+                      animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    >
+                      <Lock className="w-5 h-5 text-white" />
+                    </motion.div>
+                    <h2 className="text-lg font-bold mb-1">
+                      Unlock Your Complete Alloro Growth Plan
+                    </h2>
+                    <p className="text-gray-400 mb-4 text-xs leading-relaxed">
+                      Get AI-powered recommendations, your personalized 30-day
+                      action plan, and strategies to close the {reviewGap}{" "}
+                      review gap.
+                    </p>
+                    <motion.a
+                      href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 px-5 rounded-lg transition-all shadow-lg text-sm flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Phone className="w-4 h-4" />
+                      Book Strategy Call
+                    </motion.a>
+                    <p className="text-[10px] text-gray-500 mt-3">
+                      100% Free • No Credit Card Required
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
           </div>
+
+          {/* Email Paywall Overlay - Only shown when email not submitted */}
+          {!emailSubmitted && (
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-32 bg-white/80 backdrop-blur-md rounded-3xl">
+              <EmailPaywallOverlay onEmailSubmit={handleEmailSubmit} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2929,6 +2982,7 @@ const App = () => {
   const [auditId, setAuditId] = useState<string | null>(null);
   const [gbpCarouselComplete, setGbpCarouselComplete] = useState(false);
   const [pendingStage, setPendingStage] = useState<AuditStage | null>(null);
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
 
   // Use the polling hook
   const {
@@ -2938,6 +2992,20 @@ const App = () => {
     derivedStage,
     progress,
   } = useAuditPolling(auditId);
+
+  // Check URL params on mount to see if we should load existing audit
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const auditIdFromUrl = urlParams.get("audit_id");
+
+    if (auditIdFromUrl) {
+      console.log("Loading audit from URL:", auditIdFromUrl);
+      setAuditId(auditIdFromUrl);
+      // Polling will start automatically and set the correct stage based on status
+      // Also assume email is submitted if they are accessing via direct link with ID
+      setEmailSubmitted(true);
+    }
+  }, []);
 
   // Handle GBP carousel completion - just set the flag, the useEffect will handle the transition
   const handleGbpCarouselComplete = () => {
@@ -3168,6 +3236,9 @@ const App = () => {
                 websiteData={websiteAnalysis}
                 gbpData={gbpAnalysis}
                 screenshotUrl={screenshotDesktop}
+                auditId={auditId}
+                emailSubmitted={emailSubmitted}
+                onEmailSubmitted={() => setEmailSubmitted(true)}
               />
             </motion.div>
           )}
