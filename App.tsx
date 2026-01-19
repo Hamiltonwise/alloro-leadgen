@@ -17,7 +17,7 @@ import {
   MOCK_GBP_ANALYSIS,
   MOCK_SCREENSHOT_DESKTOP,
   MOCK_SCREENSHOT_MOBILE,
-} from "./src/constants";
+} from "./utils/constants";
 import {
   AuditStage,
   SelectedGBP,

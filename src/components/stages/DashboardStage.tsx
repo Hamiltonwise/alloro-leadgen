@@ -36,7 +36,7 @@ import {
   MOCK_COMPETITORS,
   MOCK_SCREENSHOT_DESKTOP,
   MOCK_SCREENSHOT_MOBILE,
-} from "../../constants";
+} from "../../../utils/constants";
 import { WebsiteAnalysis, GBPAnalysis, BusinessProfile, Competitor } from "../../types";
 
 /**
