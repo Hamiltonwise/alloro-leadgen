@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import {
   InputStage,
   WebsiteScanStage,
@@ -216,6 +217,9 @@ const App = () => {
     [auditData?.screenshots?.desktop_url],
   );
 
+  // Show loading overlay when audit_id is present but data hasn't arrived yet
+  const showInitialLoading = auditId && !auditData && stage !== "input";
+
   // --- RENDER ---
   return (
     <div className="flex h-screen bg-white font-sans text-slate-900 overflow-hidden selection:bg-brand-100 selection:text-brand-900">
@@ -240,6 +244,22 @@ const App = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 relative h-full overflow-hidden bg-slate-50">
+        {showInitialLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-50"
+          >
+            <div className="flex flex-col items-center gap-4 bg-white px-8 py-6 rounded-2xl shadow-xl border border-gray-200">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+              <span className="text-lg font-semibold text-gray-700">
+                Loading your report...
+              </span>
+            </div>
+          </motion.div>
+        )}
+
         <AnimatePresence mode="wait">
           {stage === "input" && (
             <motion.div
