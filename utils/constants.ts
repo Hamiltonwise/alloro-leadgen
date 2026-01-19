@@ -4,7 +4,7 @@ import {
   WebsiteAnalysis,
   GBPAnalysis,
   WebsiteMetadata,
-} from "./types";
+} from "../src/types";
 
 // Self GBP Data - Full data from the provided sample
 export const MOCK_BUSINESS: BusinessProfile = {
