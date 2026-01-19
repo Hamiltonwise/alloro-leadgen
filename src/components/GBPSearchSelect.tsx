@@ -15,8 +15,8 @@ import {
   PlacesSuggestion,
   PlacesAutocompleteResponse,
   PlacesDetailsResponse,
-} from "./types";
-import { API_BASE_URL } from "./utils/config";
+} from "../types";
+import { API_BASE_URL } from "../../utils/config";
 
 interface GBPSearchSelectProps {
   onSelect: (gbp: SelectedGBP) => void;

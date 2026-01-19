@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { AuditStatusResponse, AuditStage } from "./types";
-import { API_BASE_URL, POLL_INTERVAL } from "./utils/config";
+import { AuditStatusResponse, AuditStage } from "../types";
+import { API_BASE_URL, POLL_INTERVAL } from "../../utils/config";
 
 export function useAuditPolling(auditId: string | null) {
   const [data, setData] = useState<AuditStatusResponse | null>(null);
