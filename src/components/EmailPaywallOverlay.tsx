@@ -57,7 +57,7 @@ export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
         type: "spring",
         stiffness: 100,
       }}
-      className="bg-white/80 backdrop-blur-xl text-gray-900 p-6 md:p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4 relative overflow-hidden border border-gray-200"
+      className="bg-white backdrop-blur-xl text-gray-900 p-6 md:p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4 relative overflow-hidden border border-gray-200"
     >
       {/* Animated background glow */}
       <motion.div

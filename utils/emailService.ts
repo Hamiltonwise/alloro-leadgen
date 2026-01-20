@@ -1,4 +1,5 @@
-const N8N_WEBHOOK_URL =
+const N8N_EMAIL_URL =
+  import.meta.env.VITE_N8N_EMAIL_URL ||
   "https://n8napp.getalloro.com/webhook/alloro-email-service";
 
 interface EmailServiceParams {
@@ -204,7 +205,7 @@ export async function sendAuditReportEmail({
   };
 
   try {
-    const response = await fetch(N8N_WEBHOOK_URL, {
+    const response = await fetch(N8N_EMAIL_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

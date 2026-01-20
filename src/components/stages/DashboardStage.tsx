@@ -37,7 +37,12 @@ import {
   MOCK_SCREENSHOT_DESKTOP,
   MOCK_SCREENSHOT_MOBILE,
 } from "../../../utils/constants";
-import { WebsiteAnalysis, GBPAnalysis, BusinessProfile, Competitor } from "../../types";
+import {
+  WebsiteAnalysis,
+  GBPAnalysis,
+  BusinessProfile,
+  Competitor,
+} from "../../types";
 
 /**
  * Dashboard Stage - Final results and analysis display
@@ -93,13 +98,8 @@ export const DashboardStage = ({
       businessName: business.title,
     });
 
-    // Mark email as submitted - parent component will handle this via callback
+    // Mark email as submitted - parent component (App.tsx) handles URL update via callback
     onEmailSubmitted();
-
-    // Update URL with audit_id for persistence
-    const url = new URL(window.location.href);
-    url.searchParams.set("audit_id", auditId);
-    window.history.pushState({}, "", url.toString());
   };
 
   return (
@@ -490,15 +490,17 @@ export const DashboardStage = ({
               emailSubmitted ? "" : "blur-md select-none pointer-events-none"
             }
           >
-            {/* Local Ranking Insights Card - Orange Gradient with White Content */}
-            {gbpData.competitor_analysis && (
+            {/* Local Ranking Insights Card - Cobalt Blue with Orange Accent */}
+            {gbpData.top_action_items && (
               <motion.div
-                className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg p-6 md:p-8 mb-8 overflow-hidden relative"
+                className="bg-slate-900 rounded-2xl shadow-lg p-6 md:p-8 mb-8 overflow-hidden relative"
                 custom={4}
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
               >
+                {/* Orange accent contour - top right */}
+                <div className="absolute -top-10 -right-10 w-52 h-52 bg-brand-500 rounded-full opacity-40 blur-2xl pointer-events-none"></div>
                 <div className="flex items-start gap-4 mb-6 relative z-10">
                   <motion.div
                     className="p-3 bg-white/20 backdrop-blur-sm rounded-xl"
@@ -535,28 +537,26 @@ export const DashboardStage = ({
                     Top Recommendations
                   </span>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {gbpData.competitor_analysis.top_action_items.map(
-                      (item, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
-                          className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
-                              <span className="text-xs font-bold text-white">
-                                {idx + 1}
-                              </span>
-                            </div>
-                            <p className="text-xs leading-relaxed text-gray-700 pt-0.5">
-                              {item}
-                            </p>
+                    {gbpData.top_action_items.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
+                        className="bg-brand-500 rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white flex items-center justify-center">
+                            <span className="text-xs font-bold text-brand-500">
+                              {idx + 1}
+                            </span>
                           </div>
-                        </motion.div>
-                      ),
-                    )}
+                          <p className="text-xs leading-relaxed text-white pt-0.5">
+                            {item}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
                 </div>
               </motion.div>
@@ -847,7 +847,7 @@ export const DashboardStage = ({
 
           {/* Email Paywall Overlay - Only shown when email not submitted */}
           {!emailSubmitted && (
-            <div className="absolute inset-0 z-50 flex items-start justify-center pt-32 bg-white/80 backdrop-blur-md rounded-3xl">
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-32  backdrop-blur-md rounded-3xl">
               <EmailPaywallOverlay onEmailSubmit={handleEmailSubmit} />
             </div>
           )}

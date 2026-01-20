@@ -15,6 +15,7 @@ jobs:
       - name: Install & Build React
         env:
           VITE_API_BASE_URL: https://app.getalloro.com/api
+          VITE_N8N_EMAIL_URL: ${{ secrets.VITE_N8N_EMAIL_URL }}
         run: |
           npm install
           npm run build  # This creates the 'dist' or 'build' folder

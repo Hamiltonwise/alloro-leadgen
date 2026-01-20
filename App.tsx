@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import {
@@ -56,17 +56,87 @@ const App = () => {
     progress,
   } = useAuditPolling(auditId);
 
+  // Track if autostart has been triggered to prevent double-execution (use ref for synchronous check)
+  const autostartTriggeredRef = useRef(false);
+
+  // --- HANDLERS (defined before effects that use them) ---
+  const handleAutoStart = async (domain: string, practiceSearchString: string) => {
+    // Immediately transition to scanning stage
+    setStage("scanning_website");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/audit/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          domain: domain.startsWith("http") ? domain : `https://${domain}`,
+          practice_search_string: practiceSearchString,
+        }),
+      });
+
+      const result: StartAuditResponse = await response.json();
+      if (result.success) {
+        setAuditId(result.audit_id);
+        // Don't update URL here - wait until after email wall to avoid re-triggering
+      } else {
+        console.error("Failed to start audit:", result.error);
+        // Reset to input stage on failure
+        setStage("input");
+      }
+    } catch (error) {
+      console.error("Audit start error:", error);
+      setStage("input");
+    }
+  };
+
   // --- EFFECTS ---
   useEffect(() => {
-    // Load from URL params if audit_id present
+    // Prevent double-execution using ref (synchronous, survives StrictMode double-render)
+    if (autostartTriggeredRef.current) return;
+
     const params = new URLSearchParams(window.location.search);
+
+    // Check for existing audit_id (returning user or direct link)
     const auditIdParam = params.get("audit_id");
     if (auditIdParam) {
       setAuditId(auditIdParam);
       // Assume email is submitted if accessing via direct link
       setEmailSubmitted(true);
+      return; // Exit early, don't check autostart
     }
-  }, []);
+
+    // Check for autostart with base64 encoded data (from homepage redirect)
+    const autostart = params.get("autostart");
+    const encodedData = params.get("data");
+
+    if (autostart === "true" && encodedData) {
+      // Mark as triggered IMMEDIATELY using ref (synchronous, before any async work)
+      autostartTriggeredRef.current = true;
+
+      // Clear URL params IMMEDIATELY to prevent any re-reads
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("autostart");
+      cleanUrl.searchParams.delete("data");
+      window.history.replaceState({}, "", cleanUrl.toString());
+
+      try {
+        // Decode base64 data
+        const decodedString = atob(decodeURIComponent(encodedData));
+        const data = JSON.parse(decodedString) as {
+          domain: string;
+          practice_search_string: string;
+        };
+
+        // Validate required fields and auto-start
+        if (data.domain && data.practice_search_string) {
+          handleAutoStart(data.domain, data.practice_search_string);
+        }
+      } catch (error) {
+        console.error("Failed to parse autostart data:", error);
+        // Fall through to normal input stage
+      }
+    }
+  }, []); // Empty dependency - only run on mount
 
   useEffect(() => {
     // Sync stage with polling data
@@ -338,7 +408,17 @@ const App = () => {
                 screenshotUrl={screenshotUrl}
                 auditId={auditId}
                 emailSubmitted={emailSubmitted}
-                onEmailSubmitted={() => setEmailSubmitted(true)}
+                onEmailSubmitted={() => {
+                  setEmailSubmitted(true);
+                  // Clean URL params and set audit_id after email wall
+                  if (auditId) {
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.delete("autostart");
+                    newUrl.searchParams.delete("data");
+                    newUrl.searchParams.set("audit_id", auditId);
+                    window.history.replaceState({}, "", newUrl.toString());
+                  }
+                }}
                 modalOpen={modalOpen}
                 setModalOpen={setModalOpen}
                 selectedPillarCategory={selectedPillarCategory}
