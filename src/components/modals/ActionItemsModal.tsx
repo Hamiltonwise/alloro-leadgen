@@ -9,20 +9,19 @@ import { WebsiteAnalysis, GBPAnalysis } from "../../types";
 export const ActionItemsModal = ({
   isOpen,
   onClose,
-  pillarCategory,
   dataType,
   websiteData,
   gbpData,
-  competitorAnalysis,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  pillarCategory: string | null;
+  pillarCategory?: string | null;
   dataType: "website" | "gbp" | null;
   websiteData: WebsiteAnalysis;
   gbpData: GBPAnalysis;
-  competitorAnalysis: any | null;
+  competitorAnalysis?: any | null;
 }) => {
+
   if (!isOpen || !dataType) return null;
 
   // Get ALL pillars from the selected data type
@@ -38,10 +37,10 @@ export const ActionItemsModal = ({
       onClick={onClose}
     >
       <motion.div
-        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto action-items-modal-scroll relative"
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 flex items-center justify-between z-10">
@@ -129,16 +128,26 @@ export const ActionItemsModal = ({
             </motion.div>
           ))}
 
-          {/* Close Button */}
-          <motion.button
-            onClick={onClose}
-            className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-4 rounded-lg transition-all"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Close
-          </motion.button>
         </div>
+
+        {/* Floating CTA Button - Sticky at bottom of modal */}
+        <motion.a
+          href="https://calendar.google.com/calendar/u/0/r/settings/createcalendar"
+          target="_blank"
+          rel="noopener noreferrer"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="sticky bottom-6 left-0 mx-auto block w-fit px-6 py-3 text-white font-bold rounded-full transition-all z-20"
+          style={{
+            backgroundColor: "#d66853",
+            boxShadow: "0 8px 24px rgba(214, 104, 83, 0.4)",
+          }}
+          whileHover={{ scale: 1.05, y: -2, boxShadow: "0 12px 32px rgba(214, 104, 83, 0.5)" }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Get Help — Book a Demo
+        </motion.a>
       </motion.div>
     </motion.div>
   );
