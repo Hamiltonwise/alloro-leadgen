@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Target } from "lucide-react";
 import { getColorFromScore } from "../../lib/helpers/scoreUtils";
+import { WhyThisMattersTooltip } from "./WhyThisMattersTooltip";
 
 /**
  * Horizontal Progress Bar Component with Action Items and Modal Trigger
@@ -12,12 +13,14 @@ export const HorizontalProgressBar = ({
   actionItems = [],
   onViewMore,
   delay = 0,
+  whyThisMatters,
 }: {
   score: number;
   label: string;
   actionItems?: string[];
   onViewMore?: () => void;
   delay?: number;
+  whyThisMatters?: string;
 }) => {
   const colorMap = {
     green: {
@@ -49,14 +52,22 @@ export const HorizontalProgressBar = ({
     >
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-semibold text-gray-700">{label}</span>
-        <motion.span
-          className={`text-sm font-bold ${colors.text}`}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: delay + 0.3, type: "spring" }}
-        >
-          {score}%
-        </motion.span>
+        <div className="flex items-center gap-3">
+          {whyThisMatters && (
+            <WhyThisMattersTooltip
+              description={whyThisMatters}
+              variant="link"
+            />
+          )}
+          <motion.span
+            className={`text-sm font-bold ${colors.text}`}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: delay + 0.3, type: "spring" }}
+          >
+            {score}%
+          </motion.span>
+        </div>
       </div>
       <div
         className={`w-full h-3 ${colors.light} rounded-full overflow-hidden shadow-inner`}

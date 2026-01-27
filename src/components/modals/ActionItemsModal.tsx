@@ -21,7 +21,6 @@ export const ActionItemsModal = ({
   gbpData: GBPAnalysis;
   competitorAnalysis?: any | null;
 }) => {
-
   if (!isOpen || !dataType) return null;
 
   // Get ALL pillars from the selected data type
@@ -43,7 +42,7 @@ export const ActionItemsModal = ({
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-brand-500 to-brand-600 text-white p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-slate-900 text-white p-6 flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold">
               {dataType === "gbp"
@@ -127,27 +126,45 @@ export const ActionItemsModal = ({
               )}
             </motion.div>
           ))}
-
         </div>
 
-        {/* Floating CTA Button - Sticky at bottom of modal */}
-        <motion.a
-          href="https://calendar.google.com/calendar/u/0/r/settings/createcalendar"
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Floating CTA - Sticky at bottom of modal with frosted glass */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="sticky bottom-6 left-0 mx-auto block w-fit px-6 py-3 text-white font-bold rounded-full transition-all z-20"
+          className="sticky bottom-6 left-0 right-0 mx-auto w-fit px-8 py-5 rounded-2xl z-20 text-center"
           style={{
-            backgroundColor: "#d66853",
-            boxShadow: "0 8px 24px rgba(214, 104, 83, 0.4)",
+            background: "rgba(255, 255, 255, 0.25)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(15, 23, 42, 0.15)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.05)",
           }}
-          whileHover={{ scale: 1.05, y: -2, boxShadow: "0 12px 32px rgba(214, 104, 83, 0.5)" }}
-          whileTap={{ scale: 0.95 }}
         >
-          Get Help — Book a Demo
-        </motion.a>
+          <p className="text-sm font-semibold text-gray-700 mb-3">
+            Knowing isn't enough. Execution matters. Let{" "}
+            <span className="text-brand-500">Alloro</span> help.
+          </p>
+          <motion.a
+            href="https://calendar.google.com/calendar/u/0/r/settings/createcalendar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 text-white font-bold rounded-full transition-all"
+            style={{
+              backgroundColor: "#d66853",
+              boxShadow: "0 8px 24px rgba(214, 104, 83, 0.4)",
+            }}
+            whileHover={{
+              scale: 1.05,
+              y: -2,
+              boxShadow: "0 12px 32px rgba(214, 104, 83, 0.5)",
+            }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Book Your Strategy Call
+          </motion.a>
+        </motion.div>
       </motion.div>
     </motion.div>
   );

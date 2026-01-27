@@ -25,11 +25,17 @@ import {
   ArrowRight,
   Calendar,
 } from "lucide-react";
-import { CircularProgress, HorizontalProgressBar, GradeBadge } from "../ui";
+import {
+  CircularProgress,
+  HorizontalProgressBar,
+  GradeBadge,
+  WhyThisMattersTooltip,
+} from "../ui";
 import { ActionItemsModal } from "../modals";
 import { EmailPaywallOverlay } from "../EmailPaywallOverlay";
 import { cardVariants } from "../../lib/animations/variants";
 import { parseScoreValue } from "../../lib/helpers/scoreUtils";
+import { WHY_THIS_MATTERS } from "../../lib/constants/whyThisMatters";
 import { sendAuditReportEmail } from "../../../utils/emailService";
 import {
   MOCK_BUSINESS,
@@ -309,6 +315,13 @@ export const DashboardStage = ({
               transition: { duration: 0.3 },
             }}
           >
+            {/* Why This Matters Tooltip */}
+            <div className="absolute top-4 right-4 z-20">
+              <WhyThisMattersTooltip
+                description={WHY_THIS_MATTERS["Website Performance Grade"]}
+                variant="icon"
+              />
+            </div>
             {/* Animated gradient background */}
             <motion.div
               className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-200 to-blue-100 rounded-full opacity-50"
@@ -369,6 +382,13 @@ export const DashboardStage = ({
               transition: { duration: 0.3 },
             }}
           >
+            {/* Why This Matters Tooltip */}
+            <div className="absolute top-4 right-4 z-20">
+              <WhyThisMattersTooltip
+                description={WHY_THIS_MATTERS["Google Business Profile Grade"]}
+                variant="icon"
+              />
+            </div>
             {/* Animated gradient background */}
             <motion.div
               className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-brand-200 to-brand-100 rounded-full opacity-50"
@@ -430,6 +450,13 @@ export const DashboardStage = ({
                 transition: { duration: 0.3 },
               }}
             >
+              {/* Why This Matters Tooltip */}
+              <div className="absolute top-4 right-4 z-20">
+                <WhyThisMattersTooltip
+                  description={WHY_THIS_MATTERS["Local Ranking"]}
+                  variant="icon"
+                />
+              </div>
               {/* Animated gradient background - Orange */}
               <motion.div
                 className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-brand-200 to-brand-100 rounded-full opacity-50"
@@ -481,6 +508,78 @@ export const DashboardStage = ({
           )}
         </div>
 
+        {/* CTA Section - Alloro Orange with Gradient */}
+        <motion.div
+          className="relative overflow-hidden rounded-2xl mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          style={{
+            background:
+              "linear-gradient(135deg, #d66853 0%, #bf4b36 50%, #d66853 100%)",
+          }}
+        >
+          {/* Animated background pattern */}
+          <motion.div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, white 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+            animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          />
+          {/* Floating circles */}
+          <motion.div
+            className="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"
+            animate={{ scale: [1, 1.2, 1], x: [0, 20, 0] }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute -bottom-10 -right-10 w-52 h-52 bg-white/10 rounded-full blur-2xl"
+            animate={{ scale: [1, 1.3, 1], x: [0, -20, 0] }}
+            transition={{ duration: 10, repeat: Infinity, delay: 1 }}
+          />
+
+          <div className="relative z-10 p-8 md:p-12 text-center">
+            <p className="text-white/90 flex gap-3 items-center justify-center text-sm font-bold md:text-base max-w-2xl mx-auto mb-6">
+              Alloro Verdict{" "}
+              <div className="h-[.5px] w-[20px] bg-white/50"></div>
+              <span className="text-xs bg-yellow-100 text-yellow-800 px-5 py-1.5 = rounded-full">
+                Good
+              </span>
+            </p>
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+              But good enough isn't winning. <br /> Your practice has more
+              potential.
+            </h3>
+            <p className="text-white/90 text-sm md:text-base max-w-2xl mx-auto mb-6">
+              Your scores show a solid foundation, but competitors with stronger
+              execution are capturing the patients you're missing. Alloro helps
+              you close those gaps and outperform the average practice in your
+              area.
+            </p>
+
+            <motion.a
+              href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white text-brand-600 hover:bg-gray-100 px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Calendar className="w-5 h-5" />
+              Book Your Strategy Call
+              <ArrowRight className="w-5 h-5" />
+            </motion.a>
+
+            <p className="text-white/70 text-xs mt-4">
+              Free Consultation • No obligation • Clear next steps
+            </p>
+          </div>
+        </motion.div>
+
         <span id="scroll-rank"></span>
         {/* Email Paywall Wrapper - Content below 3-column cards */}
         <div className="relative">
@@ -527,7 +626,11 @@ export const DashboardStage = ({
                   transition={{ delay: 0.5, duration: 0.4 }}
                 >
                   <p className="text-md leading-relaxed text-white">
-                    {gbpData.competitor_analysis.key_findings}
+                    {gbpData.competitor_analysis.key_findings}{" "}
+                    <span className="text-brand-400">
+                      Beat the average and stay ahead of competitors. Alloro
+                      helps you implement and track what matters.
+                    </span>
                   </p>
                 </motion.div>
 
@@ -543,15 +646,15 @@ export const DashboardStage = ({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 + idx * 0.1, duration: 0.4 }}
-                        className="bg-brand-500 rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
+                        className="bg-white rounded-xl p-4 shadow-md hover:shadow-xl transition-shadow"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white flex items-center justify-center">
-                            <span className="text-xs font-bold text-brand-500">
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-900 flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">
                               {idx + 1}
                             </span>
                           </div>
-                          <p className="text-xs leading-relaxed text-white pt-0.5">
+                          <p className="text-xs leading-relaxed text-gray-800 pt-0.5">
                             {item}
                           </p>
                         </div>
@@ -559,6 +662,33 @@ export const DashboardStage = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Divider */}
+                <div className="h-[0.5px] bg-white/20 my-6 relative z-10" />
+
+                {/* CTA Section */}
+                <motion.div
+                  className="text-right relative z-10"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9, duration: 0.4 }}
+                >
+                  <p className="text-white text-sm mb-3">
+                    Start Outranking Competitors
+                  </p>
+                  <motion.a
+                    href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Calendar className="w-5 h-5" />
+                    Book Your Strategy Call
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.a>
+                </motion.div>
               </motion.div>
             )}
             {/* GBP Performance Metrics - Horizontal Progress Bars */}
@@ -598,7 +728,7 @@ export const DashboardStage = ({
                     setSelectedDataType("gbp");
                     setModalOpen(true);
                   }}
-                  className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -622,10 +752,38 @@ export const DashboardStage = ({
                           setModalOpen(true);
                         }}
                         delay={0.6 + idx * 0.12}
+                        whyThisMatters={WHY_THIS_MATTERS[pillar.category]}
                       />
                     </div>
                   ))}
               </div>
+
+              {/* Divider */}
+              <div className="h-[0.5px] bg-gray-200 my-6 relative z-10" />
+
+              {/* CTA Section */}
+              <motion.div
+                className="text-right relative z-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, duration: 0.4 }}
+              >
+                <p className="text-gray-600 text-sm mb-3">
+                  Optimize Your Google Business Profile
+                </p>
+                <motion.a
+                  href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Calendar className="w-5 h-5" />
+                  Book Your Strategy Call
+                  <ArrowRight className="w-5 h-5" />
+                </motion.a>
+              </motion.div>
             </motion.div>
             {/* Website Performance Metrics - Horizontal Progress Bars */}
             <motion.div
@@ -664,7 +822,7 @@ export const DashboardStage = ({
                     setSelectedDataType("website");
                     setModalOpen(true);
                   }}
-                  className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -688,10 +846,38 @@ export const DashboardStage = ({
                           setModalOpen(true);
                         }}
                         delay={0.7 + idx * 0.12}
+                        whyThisMatters={WHY_THIS_MATTERS[pillar.category]}
                       />
                     </div>
                   ))}
               </div>
+
+              {/* Divider */}
+              <div className="h-[0.5px] bg-gray-200 my-6 relative z-10" />
+
+              {/* CTA Section */}
+              <motion.div
+                className="text-right relative z-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0, duration: 0.4 }}
+              >
+                <p className="text-gray-600 text-sm mb-3">
+                  Improve Your Website Performance
+                </p>
+                <motion.a
+                  href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Calendar className="w-5 h-5" />
+                  Book Your Strategy Call
+                  <ArrowRight className="w-5 h-5" />
+                </motion.a>
+              </motion.div>
             </motion.div>
 
             {/* Blurred Detailed Analysis - Paywall */}
