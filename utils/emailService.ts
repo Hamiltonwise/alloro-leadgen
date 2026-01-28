@@ -8,6 +8,13 @@ interface EmailServiceParams {
   businessName?: string;
 }
 
+interface ErrorNotificationParams {
+  userEmail: string;
+  auditId: string;
+  errorMessage: string | null;
+  practiceInfo?: string;
+}
+
 /**
  * Generates the HTML email template with Alloro branding
  */
@@ -231,5 +238,140 @@ export async function sendAuditReportEmail({
   } catch (error) {
     console.error("Failed to send email:", error);
     throw new Error("Failed to send email. Please try again.");
+  }
+}
+
+/**
+ * Generates the HTML email template for error notification to Alloro team
+ */
+function generateErrorNotificationHTML({
+  userEmail,
+  auditId,
+  errorMessage,
+  practiceInfo,
+}: ErrorNotificationParams): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Error - User Needs Help</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%;">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding-bottom: 24px;">
+              <img src="https://app.getalloro.com/logo.png" alt="Alloro" width="140" style="display: block; height: auto;" />
+            </td>
+          </tr>
+
+          <!-- Main content -->
+          <tr>
+            <td style="background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 64px; height: 64px; background-color: #fee2e2; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                  <span style="font-size: 32px;">⚠️</span>
+                </div>
+                <div style="margin-bottom: 12px;">
+                  <span style="display: inline-block; padding: 4px 10px; background-color: #fee2e2; color: #991b1b; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Audit Failed
+                  </span>
+                </div>
+                <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #212D40;">
+                  A User Needs Help
+                </h1>
+              </div>
+
+              <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #334155;">
+                  <strong>User Email:</strong> ${userEmail}
+                </p>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #334155;">
+                  <strong>Audit ID:</strong> ${auditId}
+                </p>
+                ${practiceInfo ? `<p style="margin: 0 0 12px 0; font-size: 14px; color: #334155;"><strong>Practice:</strong> ${practiceInfo}</p>` : ""}
+                ${errorMessage ? `<p style="margin: 0; font-size: 14px; color: #ef4444;"><strong>Error:</strong> ${errorMessage}</p>` : ""}
+              </div>
+
+              <p style="margin: 0; font-size: 14px; color: #64748b; text-align: center;">
+                Please reach out to this user to help resolve their issue.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top: 32px; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748b;">
+                © ${new Date().getFullYear()} Alloro. Internal notification.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Sends error notification to Alloro team via n8n webhook
+ */
+export async function sendErrorNotificationEmail({
+  userEmail,
+  auditId,
+  errorMessage,
+  practiceInfo,
+}: ErrorNotificationParams): Promise<void> {
+  const emailBody = generateErrorNotificationHTML({
+    userEmail,
+    auditId,
+    errorMessage,
+    practiceInfo,
+  });
+
+  const payload = {
+    cc: [],
+    bcc: [],
+    body: emailBody,
+    from: "info@getalloro.com",
+    subject: `⚠️ Audit Failed - User Needs Help: ${userEmail}`,
+    fromName: "Alloro Alerts",
+    recipients: ["info@getalloro.com"],
+  };
+
+  try {
+    const response = await fetch(N8N_EMAIL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Email service responded with status: ${response.status}`,
+      );
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const result = await response.json();
+      console.log("Error notification sent successfully:", result);
+    } else {
+      console.log("Error notification sent successfully (no JSON response)");
+    }
+  } catch (error) {
+    console.error("Failed to send error notification:", error);
+    throw new Error("Failed to send notification. Please try again.");
   }
 }

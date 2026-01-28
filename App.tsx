@@ -9,8 +9,10 @@ import {
   DashboardStage,
 } from "./src/components/stages";
 import { Sidebar } from "./src/components/layout";
+import { AuditErrorModal } from "./src/components/modals";
 import { useAuditPolling } from "./src/hooks/useAuditPolling";
 import { API_BASE_URL } from "./utils/config";
+import { sendErrorNotificationEmail } from "./utils/emailService";
 import {
   MOCK_BUSINESS,
   MOCK_COMPETITORS,
@@ -46,6 +48,7 @@ const App = () => {
   const [selectedDataType, setSelectedDataType] = useState<
     "website" | "gbp" | null
   >(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   // --- HOOKS ---
   const {
@@ -174,6 +177,13 @@ const App = () => {
     }
   }, [gbpCarouselComplete, pendingStage]);
 
+  // Show error modal when audit polling returns an error
+  useEffect(() => {
+    if (auditError && auditId) {
+      setShowErrorModal(true);
+    }
+  }, [auditError, auditId]);
+
   // --- HANDLERS ---
   const handleSelectGBP = useCallback((gbp: SelectedGBP) => {
     setSelectedGBP(gbp);
@@ -186,6 +196,53 @@ const App = () => {
   const handleGbpCarouselComplete = useCallback(() => {
     setGbpCarouselComplete(true);
   }, []);
+
+  // Handle retry from error modal
+  const handleErrorRetry = useCallback(async () => {
+    setShowErrorModal(false);
+    setAuditId(null);
+    // Re-trigger audit with same selectedGBP data
+    if (selectedGBP) {
+      // Reset stage and start new audit
+      setStage("scanning_website");
+      try {
+        const response = await fetch(`${API_BASE_URL}/audit/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            domain: selectedGBP.websiteUri || `https://${selectedGBP.domain}`,
+            practice_search_string: selectedGBP.practiceSearchString,
+          }),
+        });
+
+        const result: StartAuditResponse = await response.json();
+        if (result.success) {
+          setAuditId(result.audit_id);
+        } else {
+          console.error("Failed to start audit:", result.error);
+          setStage("input");
+        }
+      } catch (error) {
+        console.error("Audit start error:", error);
+        setStage("input");
+      }
+    } else {
+      setStage("input");
+    }
+  }, [selectedGBP]);
+
+  // Handle email submission from error modal
+  const handleErrorEmailSubmit = useCallback(
+    async (email: string) => {
+      await sendErrorNotificationEmail({
+        userEmail: email,
+        auditId: auditId!,
+        errorMessage: auditError,
+        practiceInfo: selectedGBP?.practiceSearchString,
+      });
+    },
+    [auditId, auditError, selectedGBP]
+  );
 
   const startAudit = async (gbp: SelectedGBP) => {
     try {
@@ -430,6 +487,19 @@ const App = () => {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Error Modal - Shows when audit fails */}
+      <AnimatePresence>
+        {showErrorModal && (
+          <AuditErrorModal
+            isOpen={showErrorModal}
+            errorMessage={auditError}
+            onRetry={handleErrorRetry}
+            onEmailSubmit={handleErrorEmailSubmit}
+            onClose={() => setShowErrorModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
