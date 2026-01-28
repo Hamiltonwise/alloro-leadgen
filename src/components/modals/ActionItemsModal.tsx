@@ -117,7 +117,9 @@ export const ActionItemsModal = ({
                           </span>
                         </div>
                         <p className="text-xs text-gray-700 leading-relaxed pt-0.5">
-                          {item.replace(/^Executive Recommendation:\s*/i, "")}
+                          {typeof item === 'string'
+                          ? item.replace(/^Executive Recommendation:\s*/i, "")
+                          : String(item || "")}
                         </p>
                       </div>
                     ))}

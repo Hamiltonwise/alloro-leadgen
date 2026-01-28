@@ -545,7 +545,7 @@ export const DashboardStage = ({
           <div className="relative z-10 p-8 md:p-12 text-center">
             <p className="text-white/90 flex gap-3 items-center justify-center text-sm font-bold md:text-base max-w-2xl mx-auto mb-6">
               Alloro Verdict{" "}
-              <div className="h-[.5px] w-[20px] bg-white/50"></div>
+              <span className="h-[.5px] w-[20px] bg-white/50 inline-block"></span>
               <span className="text-xs bg-yellow-100 text-yellow-800 px-5 py-1.5 = rounded-full">
                 Good
               </span>

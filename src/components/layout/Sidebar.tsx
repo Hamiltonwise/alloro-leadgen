@@ -100,7 +100,7 @@ export const Sidebar = ({
           {dashboardSteps.map((step, idx) => {
             return (
               <button
-                key={step.id}
+                key={step.id || `step-${idx}`}
                 onClick={() =>
                   onDashboardAction && onDashboardAction(step.id as any)
                 }

@@ -108,7 +108,9 @@ export const HorizontalProgressBar = ({
             <Target className="w-3.5 h-3.5 text-brand-500 mt-[6px] flex-shrink-0" />
             <div className="flex-1">
               <span className="text-xs text-gray-700 leading-relaxed">
-                {actionItems[0].replace(/^Executive Recommendation:\s*/i, "")}
+                {typeof actionItems[0] === 'string'
+                  ? actionItems[0].replace(/^Executive Recommendation:\s*/i, "")
+                  : String(actionItems[0] || "")}
               </span>
             </div>
           </div>
