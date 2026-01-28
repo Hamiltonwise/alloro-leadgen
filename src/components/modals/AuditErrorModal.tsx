@@ -212,7 +212,7 @@ export const AuditErrorModal: React.FC<AuditErrorModalProps> = ({
               </motion.div>
 
               <motion.button
-                onClick={onRetry}
+                onClick={() => window.location.href = "https://getalloro.com"}
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -337,7 +337,7 @@ export const AuditErrorModal: React.FC<AuditErrorModalProps> = ({
 
               {/* Try Again Button */}
               <motion.button
-                onClick={onRetry}
+                onClick={() => window.location.href = "https://getalloro.com"}
                 className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-xl shadow-brand-500/25 flex items-center justify-center gap-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
