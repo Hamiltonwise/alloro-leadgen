@@ -27,7 +27,13 @@ export function useAuditPolling(auditId: string | null) {
           }
         }
       } else {
+        // Stop polling immediately on error
         setError(result.error_message || "Failed to fetch status");
+        setIsPolling(false);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       }
     } catch (err) {
       console.error("Polling error:", err);

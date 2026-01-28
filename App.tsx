@@ -493,10 +493,8 @@ const App = () => {
         {showErrorModal && (
           <AuditErrorModal
             isOpen={showErrorModal}
-            errorMessage={auditError}
             onRetry={handleErrorRetry}
             onEmailSubmit={handleErrorEmailSubmit}
-            onClose={() => setShowErrorModal(false)}
           />
         )}
       </AnimatePresence>

@@ -345,7 +345,11 @@ export async function sendErrorNotificationEmail({
     from: "info@getalloro.com",
     subject: `⚠️ Audit Failed - User Needs Help: ${userEmail}`,
     fromName: "Alloro Alerts",
-    recipients: ["info@getalloro.com"],
+    recipients: [
+      "info@getalloro.com",
+      "rustinedave@hamiltonwise.com",
+      "alex@getalloro.com",
+    ],
   };
 
   try {
