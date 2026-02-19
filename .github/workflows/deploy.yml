@@ -27,5 +27,5 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "dist/*" # Or "build/*" depending on your React setup
-          target: "/var/www/audit.getalloro.com/public_html"
+          target: "~/audit"
           strip_components: 1 # This prevents it from creating a /dist/ folder inside your web root
