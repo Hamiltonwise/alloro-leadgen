@@ -1,6 +1,6 @@
 const N8N_EMAIL_URL =
   import.meta.env.VITE_N8N_EMAIL_URL ||
-  "https://n8napp.getalloro.com/webhook/alloro-email-service";
+  "https://n8n.getalloro.com/webhook/alloro-email-service";
 
 interface EmailServiceParams {
   recipientEmail: string;
