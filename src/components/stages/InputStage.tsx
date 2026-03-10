@@ -97,13 +97,13 @@ export const InputStage = ({
 
         <div className="mt-12 flex flex-wrap justify-center gap-6 text-sm font-medium text-gray-500">
           <span className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
-            <Sparkles className="w-4 h-4 text-brand-500" /> AI-Powered
+            <Sparkles className="w-4 h-4 text-brand-500" /> Deep AI Analysis
           </span>
           <span className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
-            <Zap className="w-4 h-4 text-yellow-500" /> Real-time Analysis
+            <Zap className="w-4 h-4 text-yellow-500" /> Live Market Scan
           </span>
           <span className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100">
-            <Users className="w-4 h-4 text-blue-500" /> Competitor Intel
+            <Users className="w-4 h-4 text-blue-500" /> Beat Local Competitors
           </span>
         </div>
       </motion.div>
