@@ -6,46 +6,10 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>Alloro Practice Analyzer</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['"Plus Jakarta Sans"', "sans-serif"],
-            },
-            colors: {
-              brand: {
-                DEFAULT: "#d66853",
-                50: "#fdf3f1",
-                100: "#fae4df",
-                200: "#f5cdc5",
-                300: "#eea89b",
-                400: "#e57c6a",
-                500: "#d66853", // Primary
-                600: "#bf4b36",
-                700: "#9f3a28",
-                800: "#843325",
-                900: "#6d2e23",
-              },
-            },
-            animation: {
-              "scan-vertical": "scanVertical 3s ease-in-out infinite",
-            },
-            keyframes: {
-              scanVertical: {
-                "0%, 100%": { top: "0%" },
-                "50%": { top: "100%" },
-              },
-            },
-          },
-        },
-      };
-    </script>
     <style>
       /* Custom Scrollbar for the theater look */
       ::-webkit-scrollbar {
@@ -482,18 +446,6 @@
         animation: magnifierSearch 12s ease-in-out infinite;
       }
     </style>
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@^19.2.3",
-          "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-          "react/": "https://esm.sh/react@^19.2.3/",
-          "framer-motion": "https://esm.sh/framer-motion@^12.26.1",
-          "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
-        }
-      }
-    </script>
-    <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
     <div id="root"></div>

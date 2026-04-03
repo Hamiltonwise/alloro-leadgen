@@ -118,14 +118,14 @@ function MapAnimator({
   useEffect(() => {
     if (hasZoomedIn.current) return;
     hasZoomedIn.current = true;
-    map.setView(center, 11, { animate: false });
-    setTimeout(() => {
-      map.flyTo(center, 14.5, { duration: 3 });
+    try { map.setView(center, 11, { animate: false }); } catch { return; }
+    const t1 = setTimeout(() => {
+      try { map.flyTo(center, 14.5, { duration: 3 }); } catch { /* map unmounted */ }
     }, 600);
-    // Pull back to neighborhood after close-up
-    setTimeout(() => {
-      map.flyTo(center, 12.5, { duration: 2.5 });
+    const t2 = setTimeout(() => {
+      try { map.flyTo(center, 12.5, { duration: 2.5 }); } catch { /* map unmounted */ }
     }, 5000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [map, center]);
 
   // Phase 2: Fly to each competitor as it's revealed
@@ -136,7 +136,7 @@ function MapAnimator({
     lastFlyRef.current = highlightIndex;
 
     // Fly to the competitor
-    map.flyTo([comp.location.lat, comp.location.lng], 13.5, { duration: 1.5 });
+    try { map.flyTo([comp.location.lat, comp.location.lng], 13.5, { duration: 1.5 }); } catch { return; }
 
     // Pull back to show all revealed pins
     const timer = setTimeout(() => {
@@ -149,7 +149,7 @@ function MapAnimator({
             .map((c) => [c.location!.lat, c.location!.lng] as [number, number]),
         ];
         const bounds = L.latLngBounds(allPoints);
-        map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 13, duration: 2 });
+        try { map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 13, duration: 2 }); } catch { /* map unmounted */ }
       }
     }, 2500);
 
@@ -167,7 +167,7 @@ function MapAnimator({
           .map((c) => [c.location!.lat, c.location!.lng] as [number, number]),
       ];
       const bounds = L.latLngBounds(allPoints);
-      map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 12, duration: 2.5 });
+      try { map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 12, duration: 2.5 }); } catch { /* map unmounted */ }
     }, 800);
     return () => clearTimeout(timer);
   }, [scanComplete, competitors, map, center]);
