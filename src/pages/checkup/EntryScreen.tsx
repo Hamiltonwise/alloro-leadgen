@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, MapPin, Loader2, ArrowRight, UserCheck } from "lucide-react";
+import { Search, MapPin, Loader2, ArrowRight, UserCheck, Star } from "lucide-react";
 import { searchPlaces, getPlaceDetails } from "../../api/places";
 import { validateReferralCode } from "../../api/checkup";
 import { withTimeout, isConferenceMode } from "./conferenceFallback";
@@ -300,72 +300,89 @@ export default function EntryScreen() {
   };
 
   return (
-    <div className="w-full max-w-md mt-2 sm:mt-8">
+    <div className="w-full max-w-[500px] mt-2 sm:mt-6">
+
       {/* Referral banner */}
       {referrerName && (
-        <div className="flex items-center justify-center gap-2 mb-6 text-sm text-[#1A1D23] bg-[#D56753]/5 border border-[#D56753]/15 rounded-xl px-4 py-2.5">
+        <div className="anim-fade-up flex items-center justify-center gap-2 mb-6 text-sm text-[#1A1D23] bg-[#D56753]/6 border border-[#D56753]/15 rounded-xl px-4 py-2.5">
           <UserCheck className="w-4 h-4 text-[#D56753] shrink-0" />
           <span>Referred by <strong>{referrerName}</strong></span>
         </div>
       )}
 
-      {/* Headline — warm, continues the homepage identity */}
-      <div className="text-center mb-10">
-        <TailorText editKey="checkup.entry.badge" defaultText="Free. 60 seconds." as="p" className="text-xs font-semibold tracking-[0.2em] text-[#D56753]/60 uppercase mb-4" />
-        <TailorText editKey="checkup.entry.headline" defaultText="Let's see what your business has been saying." as="h1" className="text-2xl sm:text-[34px] font-semibold text-[#1A1D23] tracking-tight leading-tight font-heading" />
-        <p className="mt-4 text-base text-[#1A1D23]/50 leading-relaxed max-w-sm mx-auto">
+      {/* Live badge */}
+      <div className="anim-fade-up flex justify-center mb-7" style={{ animationDelay: '0ms' }}>
+        <span className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-[#D56753]/20 bg-white/80 text-[11px] font-bold tracking-[0.18em] text-[#D56753] uppercase shadow-[0_2px_12px_rgba(214,104,83,0.08)]">
+          <span className="relative w-1.5 h-1.5 shrink-0">
+            <span className="absolute inset-0 rounded-full bg-[#D56753]" />
+            <span className="live-dot absolute inset-0 rounded-full bg-[#D56753]" />
+          </span>
+          Free · 60 Seconds
+        </span>
+      </div>
+
+      {/* Headline */}
+      <div className="anim-fade-up text-center mb-10" style={{ animationDelay: '80ms' }}>
+        <TailorText
+          editKey="checkup.entry.headline"
+          defaultText="Let's see what your business has been saying."
+          as="h1"
+          className="font-heading text-[34px] sm:text-[42px] font-semibold text-[#1A1D23] tracking-tight leading-[1.1] mb-5"
+        />
+        <p className="text-[15px] text-[#1A1D23]/45 leading-relaxed max-w-sm mx-auto">
           {selectedPlace
             ? `We'll read your market in ${selectedPlace.city || "your area"} and tell you what we find. Honest.`
-            : "Type your name. We'll tell you something specific and true about your business."}
+            : "Type your business name. We'll tell you something specific and true."}
         </p>
       </div>
 
-      {/* Search input — premium styling */}
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+      {/* Search input */}
+      <div className="anim-fade-up relative" style={{ animationDelay: '160ms' }}>
+        <div className="relative group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-[#1A1D23]/25 pointer-events-none transition-colors duration-200 group-focus-within:text-[#D56753]" />
           <input
             ref={searchInputRef}
             type="text"
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
-            placeholder="Search your business name..."
+            placeholder="Search your business name…"
             autoComplete="off"
-            className="w-full h-[56px] pl-12 pr-12 rounded-2xl bg-white border border-[#D56753]/10 text-base text-[#1A1D23] placeholder:text-slate-400 shadow-[0_2px_12px_rgba(214,104,83,0.04)] transition-all duration-200 focus:outline-none focus:border-[#D56753]/40 focus:ring-4 focus:ring-[#D56753]/8 focus:shadow-[0_2px_20px_rgba(214,104,83,0.1)]"
+            className="w-full h-[60px] pl-14 pr-14 rounded-2xl bg-white border-2 border-[#1A1D23]/8 text-base font-medium text-[#1A1D23] placeholder:text-[#1A1D23]/25 shadow-[0_4px_24px_rgba(26,29,35,0.06)] transition-all duration-200 focus:outline-none focus:border-[#D56753]/35 focus:shadow-[0_4px_32px_rgba(214,104,83,0.12)]"
           />
           {isSearching && (
-            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D56753] animate-spin" />
+            <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-[#D56753] animate-spin" />
           )}
         </div>
 
-        {/* Search error */}
+        {/* Feedback states */}
         {searchError && !isSearching && (
-          <p className="text-xs text-[#D56753] mt-2 ml-1">We couldn't search right now. Check your connection and try again.</p>
+          <p className="text-xs text-[#D56753] mt-2.5 ml-1.5 font-medium">
+            Couldn't search right now — check your connection and try again.
+          </p>
         )}
-
-        {/* No results found */}
         {noResults && !isSearching && !searchError && query.trim().length >= 3 && (
-          <p className="text-xs text-slate-500 mt-2 ml-1">No businesses found. Try a different name or add your city.</p>
+          <p className="text-xs text-[#1A1D23]/40 mt-2.5 ml-1.5">
+            No businesses found. Try a different name or add your city.
+          </p>
         )}
 
         {/* Autocomplete dropdown */}
         {suggestions.length > 0 && !selectedPlace && (
-          <ul className="absolute z-30 top-full mt-2 w-full bg-white border border-[#D56753]/10 rounded-2xl shadow-warm-lg overflow-hidden max-h-[60vh] overflow-y-auto">
-            {suggestions.map((s) => (
-              <li key={s.placeId}>
+          <ul className="absolute z-30 top-full mt-2 w-full bg-white border-2 border-[#1A1D23]/6 rounded-2xl shadow-[0_16px_48px_rgba(26,29,35,0.12)] overflow-hidden max-h-[60vh] overflow-y-auto anim-slide-down">
+            {suggestions.map((s, i) => (
+              <li key={s.placeId} className="border-b border-[#1A1D23]/4 last:border-0">
                 <button
                   type="button"
                   onClick={() => handleSelect(s)}
-                  className="w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-[#D56753]/3 transition-colors"
+                  className="w-full flex items-start gap-4 px-5 py-4 text-left hover:bg-[#FDFCF9] transition-colors duration-150"
+                  style={{ animationDelay: `${i * 30}ms` }}
                 >
-                  <MapPin className="w-4 h-4 text-[#D56753] mt-0.5 shrink-0" />
+                  <div className="w-7 h-7 rounded-lg bg-[#D56753]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#D56753]" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1A1D23] break-words">
-                      {s.mainText}
-                    </p>
-                    <p className="text-xs text-slate-500 break-words">
-                      {s.secondaryText}
-                    </p>
+                    <p className="text-sm font-semibold text-[#1A1D23] break-words leading-snug">{s.mainText}</p>
+                    <p className="text-xs text-[#1A1D23]/40 break-words mt-0.5">{s.secondaryText}</p>
                   </div>
                 </button>
               </li>
@@ -376,12 +393,8 @@ export default function EntryScreen() {
 
       {/* Intent chips */}
       {!selectedPlace && !isSelecting && (
-        <div className="mt-6 flex flex-wrap gap-2 justify-center">
-          {[
-            "Who's beating me in my market?",
-            "What's my online presence score?",
-            "How do I get more customers?",
-          ].map((label) => (
+        <div className="anim-fade-up mt-5 flex flex-wrap gap-2 justify-center" style={{ animationDelay: '240ms' }}>
+          {["Who's beating me?", "What's my online score?", "How do I rank higher?"].map((label) => (
             <button
               key={label}
               type="button"
@@ -389,10 +402,10 @@ export default function EntryScreen() {
                 setIntent(label);
                 searchInputRef.current?.focus();
               }}
-              className={`text-[13px] px-4 py-2 rounded-full border transition-all duration-200 ${
+              className={`text-[12px] px-3.5 py-1.5 rounded-full border transition-all duration-200 ${
                 intent === label
-                  ? "border-[#D56753] bg-[#D56753]/5 text-[#D56753] font-semibold shadow-sm"
-                  : "border-slate-200 text-[#1A1D23]/70 hover:border-[#D56753]/40 hover:text-[#D56753]"
+                  ? "border-[#D56753] bg-[#D56753]/8 text-[#D56753] font-bold shadow-[0_2px_8px_rgba(214,104,83,0.15)]"
+                  : "border-[#1A1D23]/10 bg-white/60 text-[#1A1D23]/50 hover:border-[#D56753]/30 hover:text-[#D56753] hover:bg-white"
               }`}
             >
               {label}
@@ -401,51 +414,82 @@ export default function EntryScreen() {
         </div>
       )}
 
-      {/* Selected place card */}
+      {/* Loading spinner */}
       {isSelecting && (
-        <div className="mt-8 flex justify-center">
-          <Loader2 className="w-6 h-6 text-[#D56753] animate-spin" />
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#D56753]/20 border-t-[#D56753] animate-spin" />
+          <p className="text-xs text-[#1A1D23]/35 font-medium tracking-wide">Fetching your profile…</p>
         </div>
       )}
 
+      {/* Confirm card */}
       {selectedPlace && !isSelecting && (
-        <div className="mt-8 bg-gradient-to-br from-white to-[#FFF9F7] border border-[#D56753]/12 rounded-2xl p-6 shadow-warm-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#D56753]/15 to-[#D56753]/5 flex items-center justify-center shrink-0">
-              <MapPin className="w-5 h-5 text-[#D56753]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-base font-bold text-[#1A1D23]">
-                {selectedPlace.name}
-              </p>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {selectedPlace.formattedAddress}
-              </p>
-              {selectedPlace.category && (
-                <span className="inline-block mt-2 text-xs font-semibold text-[#D56753] bg-[#D56753]/8 rounded-full px-2.5 py-0.5">
-                  {competitorTerm(selectedPlace.category, selectedPlace.types || [], selectedPlace.name)}
-                </span>
-              )}
+        <div className="anim-scale-in mt-6" style={{ animationDelay: '0ms' }}>
+          <div className="relative bg-white rounded-2xl shadow-[0_8px_40px_rgba(26,29,35,0.08)] overflow-hidden border border-[#1A1D23]/6">
+            {/* Left accent bar */}
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#D56753] to-[#e57c6a]" />
+
+            <div className="pl-7 pr-6 pt-6 pb-5">
+              {/* Business info */}
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#D56753]/12 to-[#D56753]/5 flex items-center justify-center shrink-0 mt-0.5">
+                  <MapPin className="w-5 h-5 text-[#D56753]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-bold text-[#1A1D23] leading-tight">{selectedPlace.name}</p>
+                  <p className="text-sm text-[#1A1D23]/45 mt-1 leading-snug">{selectedPlace.formattedAddress}</p>
+                  <div className="flex items-center gap-2.5 mt-3">
+                    {selectedPlace.category && (
+                      <span className="inline-block text-[11px] font-bold text-[#D56753] bg-[#D56753]/8 rounded-full px-2.5 py-0.5 tracking-wide uppercase">
+                        {competitorTerm(selectedPlace.category, selectedPlace.types || [], selectedPlace.name)}
+                      </span>
+                    )}
+                    {selectedPlace.rating != null && (
+                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#1A1D23]/50">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        {selectedPlace.rating}
+                        {selectedPlace.reviewCount > 0 && (
+                          <span className="font-normal text-[#1A1D23]/30">({selectedPlace.reviewCount})</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-5 pt-4 border-t border-[#1A1D23]/6 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlace(null);
+                    setQuery("");
+                    setSuggestions([]);
+                  }}
+                  className="text-xs text-[#1A1D23]/30 hover:text-[#1A1D23]/55 transition-colors font-medium"
+                >
+                  ← Search again
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#D56753] text-white text-sm font-bold px-6 py-3 hover:bg-[#bf4b36] active:scale-[0.97] transition-all duration-150 shadow-[0_4px_16px_rgba(214,104,83,0.35)]"
+                >
+                  <TailorText editKey="checkup.entry.cta" defaultText="Run My Checkup" as="span" />
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="btn-primary btn-press mt-5 w-full h-[3.25rem] flex items-center justify-center gap-2 text-[15px]"
-          >
-            <TailorText editKey="checkup.entry.cta" defaultText="Run My Checkup" as="span" />
-            <ArrowRight className="w-4 h-4" />
-          </button>
         </div>
       )}
 
-      {/* Trust signals — refined */}
-      <div className="mt-12 flex items-center justify-center gap-4">
+      {/* Trust signals */}
+      <div className="anim-fade-up mt-10 flex items-center justify-center gap-0" style={{ animationDelay: '320ms' }}>
         {["Free", "60 seconds", "See your score instantly"].map((text, i) => (
-          <span key={text} className="flex items-center gap-1.5 text-xs text-slate-400">
-            {i > 0 && <span className="w-1 h-1 rounded-full bg-slate-300" />}
-            {text}
+          <span key={text} className="flex items-center">
+            {i > 0 && <span className="w-px h-3 bg-[#1A1D23]/12 mx-3.5" />}
+            <span className="text-[11px] font-medium text-[#1A1D23]/28 tracking-wide">{text}</span>
           </span>
         ))}
       </div>

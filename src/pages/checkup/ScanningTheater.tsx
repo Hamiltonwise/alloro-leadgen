@@ -189,31 +189,31 @@ function ChecklistItem({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 transition-all duration-500 ${
-        state === "pending" ? "opacity-30" : "opacity-100"
+      className={`flex items-center gap-3.5 transition-all duration-500 ${
+        state === "pending" ? "opacity-25" : "opacity-100"
       }`}
     >
       <div
-        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
+        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all duration-500 ${
           state === "done"
-            ? "bg-[#D56753]"
+            ? "bg-[#D56753] shadow-[0_2px_8px_rgba(214,104,83,0.35)]"
             : state === "active"
-              ? "bg-[#D56753]/20 ring-2 ring-[#D56753]/40"
-              : "bg-slate-200"
+              ? "bg-[#D56753]/12 ring-2 ring-[#D56753]/30"
+              : "bg-[#1A1D23]/6"
         }`}
       >
         {state === "done" && <Check className="w-3.5 h-3.5 text-white" />}
         {state === "active" && (
-          <Loader2 className="w-3.5 h-3.5 text-[#D56753] animate-spin" />
+          <Loader2 className="w-3 h-3 text-[#D56753] animate-spin" />
         )}
       </div>
       <span
-        className={`text-sm transition-all duration-500 ${
+        className={`text-[13px] leading-snug transition-all duration-500 ${
           state === "done"
-            ? "text-slate-900 font-medium"
+            ? "text-[#1A1D23] font-semibold"
             : state === "active"
-              ? "text-slate-900 font-medium"
-              : "text-slate-400"
+              ? "text-[#1A1D23] font-semibold"
+              : "text-[#1A1D23]/40"
         }`}
       >
         {text}
@@ -332,9 +332,9 @@ function DiscoveryFeed({
   }, [apiDone, competitors.length, businessItems.length]);
 
   return (
-    <div className="space-y-1.5 mt-5 pt-5 border-t border-slate-100 max-h-[220px] overflow-y-auto">
+    <div className="space-y-1.5 mt-5 pt-5 border-t border-[#1A1D23]/6 max-h-[220px] overflow-y-auto">
       {/* Business data section */}
-      <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">
+      <p className="text-[10px] font-bold tracking-[0.2em] text-[#1A1D23]/30 uppercase mb-2">
         Your Profile
       </p>
       {businessItems.slice(0, visibleBusinessItems).map((item, i) => (
@@ -357,7 +357,7 @@ function DiscoveryFeed({
       {/* Competitors section */}
       {visibleCompetitorItems > 0 && (
         <>
-          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mt-3 mb-2">
+          <p className="text-[10px] font-bold tracking-[0.2em] text-[#1A1D23]/30 uppercase mt-3 mb-2">
             Competitors Found
           </p>
           {competitorItems.current.slice(0, visibleCompetitorItems).map((item, i) => {
@@ -395,7 +395,7 @@ function DiscoveryFeed({
       {/* Oz teaser findings — build anticipation for the results page */}
       {visibleOzLines > 0 && (
         <>
-          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mt-3 mb-2">
+          <p className="text-[10px] font-bold tracking-[0.2em] text-[#1A1D23]/30 uppercase mt-3 mb-2">
             Deep Analysis
           </p>
           {OZ_TEASER_LINES.slice(0, visibleOzLines).map((line, i) => (
@@ -441,7 +441,7 @@ function ReviewTicker({ reviews }: { reviews: PlaceReview[] }) {
   return (
     <div
       key={visibleIndex}
-      className="mt-3 bg-slate-50 rounded-lg p-3 animate-in fade-in slide-in-from-bottom-1 duration-500"
+      className="mt-3 bg-[#FDFCF9] border border-[#1A1D23]/6 rounded-xl p-3 anim-scale-in"
     >
       <div className="flex items-start gap-2">
         <Quote className="w-3 h-3 text-[#D56753] shrink-0 mt-0.5 rotate-180" />
@@ -486,7 +486,7 @@ function PhotoStrip({ photos }: { photos: PlacePhoto[] }) {
 
   return (
     <div className="mt-3">
-      <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">
+      <p className="text-[10px] font-bold tracking-[0.2em] text-[#1A1D23]/30 uppercase mb-2">
         GBP Photos
       </p>
       <div className="flex gap-1.5 overflow-hidden">
@@ -807,23 +807,27 @@ export default function ScanningTheater() {
 
   return (
     <div className="w-full max-w-4xl mt-2 sm:mt-6">
-      {/* Header — dramatic, branded */}
-      <div className="text-center mb-8">
-        <p className="text-xs font-semibold tracking-widest text-[#D56753] uppercase mb-2">
+      {/* Header */}
+      <div className="text-center mb-8 anim-fade-up">
+        <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#D56753]/20 bg-[#D56753]/6 text-[11px] font-bold tracking-[0.18em] text-[#D56753] uppercase mb-4">
+          <span className="relative w-1.5 h-1.5 shrink-0">
+            <span className="absolute inset-0 rounded-full bg-[#D56753]" />
+            <span className="live-dot absolute inset-0 rounded-full bg-[#D56753]" />
+          </span>
           Market Analysis
-        </p>
-        <h2 className="text-2xl sm:text-3xl font-semibold text-[#1A1D23] tracking-tight">
+        </span>
+        <h2 className="font-heading text-[26px] sm:text-[32px] font-semibold text-[#1A1D23] tracking-tight leading-tight">
           Scanning {place.name}
         </h2>
-        <p className="text-sm text-slate-500 mt-2">
+        <p className="text-sm text-[#1A1D23]/40 mt-2">
           Analyzing {place.city ? `the ${place.city} market` : "your market"} in real time
         </p>
       </div>
 
-      {/* Two-panel layout — map first on mobile, checklist first on desktop */}
+      {/* Two-panel layout */}
       <div className="flex flex-col lg:flex-row gap-5">
-        {/* Left panel — Animated Checklist (second on mobile, first on desktop) */}
-        <div className="order-last lg:order-first lg:w-[340px] shrink-0 bg-white border border-slate-200 rounded-2xl p-7 shadow-[0_4px_20px_rgba(0,0,0,0.06)] lg:max-h-[520px] lg:overflow-y-auto">
+        {/* Left panel — Animated Checklist */}
+        <div className="order-last lg:order-first lg:w-[340px] shrink-0 bg-white border border-[#1A1D23]/6 rounded-2xl p-6 shadow-[0_4px_24px_rgba(26,29,35,0.07)] lg:max-h-[520px] lg:overflow-y-auto anim-fade-up" style={{ animationDelay: '100ms' }}>
           <div className="space-y-4">
             {CHECKLIST_ITEMS.map((text, i) => (
               <ChecklistItem

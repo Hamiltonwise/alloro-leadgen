@@ -203,8 +203,8 @@ function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold text-[#1A1D23]">{displayScore}</span>
-        <span className={`text-sm font-semibold ${getScoreLabelColor(score)}`}>
+        <span className="font-heading text-4xl font-semibold text-[#1A1D23] leading-none">{displayScore}</span>
+        <span className={`text-xs font-bold mt-1 tracking-wide uppercase ${getScoreLabelColor(score)}`}>
           {getScoreLabel(score)}
         </span>
       </div>
@@ -349,7 +349,7 @@ function FindingCard({
           />
         </div>
         <div className="min-w-0">
-          <p className={`text-sm font-semibold ${isSentiment ? "text-white" : "text-[#1A1D23]"}`}>
+          <p className={`text-sm font-semibold font-heading ${isSentiment ? "text-white" : "text-[#1A1D23]"}`}>
             {finding.title}
           </p>
           <p className={`text-sm mt-1 leading-relaxed ${isSentiment ? "text-white/70" : "text-slate-500"}`}>{finding.detail}</p>
@@ -908,10 +908,10 @@ export default function ResultsScreen() {
 
       {/* Practice name + market context */}
       <div className="text-center">
-        <p className="text-xs font-semibold tracking-widest text-[#D56753] uppercase mb-2">
+        <p className="text-[11px] font-bold tracking-[0.2em] text-[#D56753]/70 uppercase mb-2">
           How You Stack Up
         </p>
-        <h2 className="text-2xl font-semibold text-[#1A1D23]">{place.name}</h2>
+        <h2 className="font-heading text-[26px] sm:text-[30px] font-semibold text-[#1A1D23] tracking-tight leading-tight">{place.name}</h2>
         {market && market.totalCompetitors > 0 && (
           <p className="text-sm text-slate-400 mt-1.5">
             vs. {market.totalCompetitors} competitors in {market.city}
@@ -957,9 +957,9 @@ export default function ResultsScreen() {
       )}
 
       {/* Sub-scores — First Impression breakdown */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] space-y-6">
+      <div className="bg-white border border-[#1A1D23]/6 rounded-2xl p-6 shadow-[0_4px_24px_rgba(26,29,35,0.07)] space-y-6">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Behind the Score</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A1D23]/30">Behind the Score</p>
           {state.scoreLabel && (
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
               score.composite >= 80 ? "bg-emerald-50 text-emerald-700" :
@@ -1131,7 +1131,7 @@ export default function ResultsScreen() {
 
       {/* Findings — first visible, rest blurred */}
       <div className="space-y-3">
-        <h2 className="text-sm font-bold text-[#1A1D23] uppercase tracking-wide">Key Findings</h2>
+        <h2 className="text-[10px] font-bold text-[#1A1D23]/30 uppercase tracking-[0.2em]">Key Findings</h2>
         {state.userQuestion && (
           <div className="bg-[#D56753]/5 border border-[#D56753]/15 rounded-xl px-4 py-3 text-sm text-[#1A1D23]">
             You asked: &ldquo;{state.userQuestion}&rdquo;. Here&apos;s what we found.
@@ -1152,9 +1152,11 @@ export default function ResultsScreen() {
       {/* Blur Gate — Voss-style: they're receiving something, not being extracted from.
           Frame as delivery, not transaction. "Your full checkup is ready." */}
       {!emailSubmitted ? (
-        <div className="bg-gradient-to-br from-white to-[#FFF9F7] border-2 border-[#D56753]/20 rounded-2xl p-7 shadow-warm-lg">
+        <div className="relative bg-white rounded-2xl border border-[#1A1D23]/6 shadow-[0_8px_40px_rgba(26,29,35,0.08)] overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#D56753] to-[#e57c6a]" />
+          <div className="pl-7 pr-6 pt-6 pb-6">
           <div className="mb-4">
-            <p className="text-base font-bold text-[#1A1D23] font-heading">
+            <p className="font-heading text-[18px] font-semibold text-[#1A1D23]">
               Your full checkup is ready.
             </p>
             <p className="text-sm text-[#1A1D23]/50 mt-1">
@@ -1389,21 +1391,22 @@ export default function ResultsScreen() {
               </>
             )}
           </form>
-          {/* Trust signals -- 15-42% conversion lift per Baymard Institute */}
+          {/* Trust signals */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-5">
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-xs text-[#1A1D23]/30 flex items-center gap-1">
               <Lock className="w-3 h-3" /> No credit card
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-[#1A1D23]/30">
               Cancel anytime
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-[#1A1D23]/30">
               Your data stays yours
             </span>
           </div>
-          <p className="text-xs text-slate-300 text-center mt-2 leading-relaxed">
+          <p className="text-xs text-[#1A1D23]/20 text-center mt-2 leading-relaxed">
             Built on Claude by Anthropic. Your data is never sold or shared.
           </p>
+          </div>
         </div>
       ) : (
         <>
@@ -1424,8 +1427,8 @@ export default function ResultsScreen() {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/30 mb-3">
               Business Clarity Score
             </p>
-            <p className="text-5xl font-semibold text-white">{score.composite}</p>
-            <p className="text-sm font-semibold text-white/60 mt-1">{place.name}</p>
+            <p className="font-heading text-5xl font-semibold text-white">{score.composite}</p>
+            <p className="font-heading text-sm font-semibold text-white/60 mt-1">{place.name}</p>
             {market && (
               <p className="text-xs text-white/30 mt-1">
                 #{market.rank} of {market.totalCompetitors} in {market.city}

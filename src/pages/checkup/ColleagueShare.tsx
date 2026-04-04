@@ -24,10 +24,10 @@ function getScoreLabel(score: number): string {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return "bg-emerald-500";
-  if (score >= 60) return "bg-amber-500";
-  if (score >= 40) return "bg-orange-500";
-  return "bg-red-500";
+  if (score >= 80) return "#10B981";
+  if (score >= 60) return "#F59E0B";
+  if (score >= 40) return "#F97316";
+  return "#EF4444";
 }
 
 export default function ColleagueShare() {
@@ -106,104 +106,103 @@ export default function ColleagueShare() {
   }, [navigate, referralCode]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm text-center space-y-8">
-        {/* Score badge */}
-        {checkupScore != null && (
-          <div className="flex flex-col items-center gap-2">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full border-[3px] border-slate-100 flex items-center justify-center">
-                <span className="text-3xl font-semibold text-[#1A1D23]">
-                  {checkupScore}
-                </span>
-              </div>
-              <div
-                className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white uppercase tracking-wider ${getScoreColor(checkupScore)}`}
-              >
+    <div className="w-full max-w-[440px] mt-4 sm:mt-10 space-y-5">
+
+      {/* Score badge */}
+      {checkupScore != null && (
+        <div className="anim-fade-up flex justify-center mb-2" style={{ animationDelay: '0ms' }}>
+          <div className="relative inline-flex flex-col items-center">
+            <div
+              className="w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-2 shadow-[0_8px_32px_rgba(26,29,35,0.08)]"
+              style={{ borderColor: `${getScoreColor(checkupScore)}40`, background: `${getScoreColor(checkupScore)}08` }}
+            >
+              <span className="font-heading text-[40px] font-semibold leading-none text-[#1A1D23]">
+                {checkupScore}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] mt-1" style={{ color: getScoreColor(checkupScore) }}>
                 {getScoreLabel(checkupScore)}
-              </div>
+              </span>
             </div>
           </div>
-        )}
-
-        {/* Headline */}
-        <div className="space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[#1A1D23] tracking-tight leading-tight">
-            Know someone who should see theirs?
-          </h1>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
-            It takes 60 seconds. Send them the link and they will see exactly where they stand in their market.
-          </p>
         </div>
+      )}
 
-        {/* Pre-written message preview */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] text-left">
-          <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase mb-3">
-            Your message
-          </p>
-          <p className="text-sm text-[#1A1D23] leading-relaxed">
+      {/* Headline */}
+      <div className="anim-fade-up text-center space-y-2.5" style={{ animationDelay: '80ms' }}>
+        <h1 className="font-heading text-[26px] sm:text-[30px] font-semibold text-[#1A1D23] tracking-tight leading-tight">
+          Know someone who should see theirs?
+        </h1>
+        <p className="text-sm text-[#1A1D23]/45 leading-relaxed max-w-xs mx-auto">
+          60 seconds. Send the link and they'll see exactly where they stand.
+        </p>
+      </div>
+
+      {/* Message preview card */}
+      <div className="anim-scale-in relative bg-white rounded-2xl border border-[#1A1D23]/6 shadow-[0_4px_24px_rgba(26,29,35,0.06)] overflow-hidden" style={{ animationDelay: '160ms' }}>
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#D56753] to-[#e57c6a]" />
+        <div className="pl-6 pr-5 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#1A1D23]/30 mb-3">Your message</p>
+          <p className="text-sm text-[#1A1D23]/70 leading-relaxed">
             "I just found out where I rank in my market. Took 60 seconds. You should see yours:{" "}
-            <span className="text-[#D56753] font-medium break-all">{checkupLink}</span>"
+            <span className="text-[#D56753] font-semibold break-all">{checkupLink}</span>"
           </p>
         </div>
+      </div>
 
-        {/* Primary share button */}
+      {/* Share button */}
+      <button
+        onClick={handleShare}
+        className="anim-fade-up w-full py-4 px-6 rounded-xl text-white font-bold text-[15px] tracking-tight transition-all duration-200 active:scale-[0.97] hover:brightness-110 shadow-[0_4px_20px_rgba(214,104,83,0.35)]"
+        style={{ backgroundColor: "#D56753", animationDelay: '240ms' }}
+      >
+        <span className="flex items-center justify-center gap-2.5">
+          <Share2 className="w-4.5 h-4.5" />
+          {shared ? "Sent!" : "Send via text"}
+        </span>
+      </button>
+
+      {/* Copy link */}
+      <div className="anim-fade-up flex items-center gap-2" style={{ animationDelay: '300ms' }}>
+        <input
+          id="share-link-input"
+          type="text"
+          readOnly
+          value={checkupLink}
+          className="flex-1 text-xs text-[#1A1D23]/40 bg-white border border-[#1A1D23]/8 rounded-xl px-3.5 py-3 truncate focus:outline-none font-medium"
+        />
         <button
-          onClick={handleShare}
-          className="w-full py-4 px-6 rounded-2xl text-white font-bold text-lg tracking-tight shadow-lg shadow-[#D56753]/25 transition-all duration-200 active:scale-[0.97] hover:shadow-xl hover:shadow-[#D56753]/30"
-          style={{ backgroundColor: "#D56753" }}
+          onClick={handleCopy}
+          className="shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-xl border border-[#1A1D23]/8 bg-white text-sm font-semibold text-[#1A1D23] hover:bg-[#FDFCF9] transition-colors"
         >
-          <span className="flex items-center justify-center gap-3">
-            <Share2 className="w-5 h-5" />
-            {shared ? "Sent!" : "Send via text"}
-          </span>
+          {copied ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span className="text-emerald-600">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              Copy
+            </>
+          )}
         </button>
+      </div>
 
-        {/* Copy link secondary action */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              id="share-link-input"
-              type="text"
-              readOnly
-              value={checkupLink}
-              className="flex-1 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 truncate focus:outline-none"
-            />
-            <button
-              onClick={handleCopy}
-              className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-[#1A1D23] hover:bg-slate-50 transition-colors"
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copy
-                </>
-              )}
-            </button>
-          </div>
+      {/* Rise Together */}
+      {referralCode && (
+        <div className="anim-scale-in bg-[#D56753]/5 border border-[#D56753]/15 rounded-xl p-4" style={{ animationDelay: '360ms' }}>
+          <p className="text-[10px] font-bold text-[#D56753] uppercase tracking-[0.18em] mb-1.5">Rise Together</p>
+          <p className="text-sm text-[#1A1D23]/70 leading-relaxed">
+            When they join, you both pay $1,000 instead of $2,000 for the first 3 months.
+          </p>
         </div>
+      )}
 
-        {/* Rise Together incentive */}
-        {referralCode && (
-          <div className="bg-[#D56753]/5 border border-[#D56753]/15 rounded-2xl p-4">
-            <p className="text-xs font-semibold text-[#D56753] uppercase tracking-wide mb-1">
-              Rise Together
-            </p>
-            <p className="text-sm text-[#1A1D23] leading-relaxed">
-              When they join, you both pay $1,000 instead of $2,000 for the first 3 months.
-            </p>
-          </div>
-        )}
-
-        {/* Skip link */}
+      {/* Skip */}
+      <div className="flex justify-center pt-1">
         <button
           onClick={handleSkip}
-          className="text-xs text-slate-400 hover:text-slate-500 transition-colors py-2"
+          className="text-xs text-[#1A1D23]/25 hover:text-[#1A1D23]/45 transition-colors py-2 font-medium"
         >
           Skip for now
         </button>
