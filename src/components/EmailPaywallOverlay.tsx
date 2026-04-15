@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, Mail, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { trackEvent, setCurrentStage } from "../lib/tracking";
+import { trackEvent, setCurrentStage, submitEmailPaywall } from "../lib/tracking";
 
 interface EmailPaywallOverlayProps {
   onEmailSubmit: (email: string) => Promise<void>;
+  // Audit id is required for the server-authoritative event write — without
+  // it the backend can't link the email-submitted event to a specific audit.
+  // Optional in the type so the component still works in older callers
+  // during rollout, but consumers should always pass it.
+  auditId?: string | null;
 }
 
 export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
   onEmailSubmit,
+  auditId,
 }) => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,8 +48,20 @@ export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Server-authoritative event recording FIRST. Awaiting this guarantees
+      // session.email and the email_submitted event row are durably written
+      // before the user can navigate away (e.g. clicking "Create Free
+      // Account" on the dashboard right after). Without this, JS fire-and-
+      // forget trackEvent calls were sometimes lost on iOS Safari, breaking
+      // the linkAccountCreation match at signup time.
+      if (auditId) {
+        await submitEmailPaywall({ email, auditId });
+      }
+
       await onEmailSubmit(email);
-      // Success — fire email_submitted after the handler resolves
+      // Belt-and-suspenders: keep the JS event fire too. Server-side write
+      // is idempotent so this is a no-op if it already landed via the call
+      // above.
       setCurrentStage("email_submitted");
       trackEvent("email_submitted", { email });
       // Success handled by parent component

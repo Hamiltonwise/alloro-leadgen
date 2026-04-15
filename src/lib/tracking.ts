@@ -6,8 +6,11 @@
  * see a funnel of who landed, who submitted an email, and who dropped off.
  *
  * Design notes:
- * - Session ID is generated once per tab via `sessionStorage` (a new tab starts
- *   a fresh session; intentional so reopening re-engages the funnel cleanly).
+ * - Session ID lives in `localStorage` so the same person on the same device
+ *   keeps the same session id across browser closes / tab churn / iOS Safari
+ *   aggressive tab eviction. Was previously `sessionStorage` which produced
+ *   ghost rows in admin every time a user closed and reopened their browser.
+ *   Cleared only by explicit "clear site data" action by the user.
  * - Session creation is LAZY: we do not POST `/leadgen/session` on app mount.
  *   The first `trackEvent` / `trackBeacon` call ensures the session is created
  *   before (or alongside) the event fires. This keeps bots and drive-by loads
@@ -75,6 +78,7 @@ const SESSION_ENDPOINT = `${API_BASE_URL}/leadgen/session`;
 const EVENT_ENDPOINT = `${API_BASE_URL}/leadgen/event`;
 const BEACON_ENDPOINT = `${API_BASE_URL}/leadgen/beacon`;
 const EMAIL_NOTIFY_ENDPOINT = `${API_BASE_URL}/leadgen/email-notify`;
+const EMAIL_PAYWALL_ENDPOINT = `${API_BASE_URL}/leadgen/email-paywall`;
 
 let cachedSessionId: string | null = null;
 let sessionInitPromise: Promise<void> | null = null;
@@ -149,7 +153,7 @@ function parseUtmParams(): Omit<SessionInitPayload, "session_id" | "referrer"> {
 function shouldSendAttribution(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.sessionStorage.getItem(ATTR_SENT_KEY) !== "1";
+    return window.localStorage.getItem(ATTR_SENT_KEY) !== "1";
   } catch {
     return false;
   }
@@ -158,9 +162,9 @@ function shouldSendAttribution(): boolean {
 function markAttributionSent(): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(ATTR_SENT_KEY, "1");
+    window.localStorage.setItem(ATTR_SENT_KEY, "1");
   } catch {
-    // no-op — sessionStorage may be unavailable in private mode
+    // no-op — localStorage may be unavailable in private mode
   }
 }
 
@@ -183,17 +187,17 @@ export function getSessionId(): string {
     return cachedSessionId;
   }
   try {
-    const existing = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
     if (existing) {
       cachedSessionId = existing;
       return existing;
     }
     const fresh = generateUuid();
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, fresh);
+    window.localStorage.setItem(SESSION_STORAGE_KEY, fresh);
     cachedSessionId = fresh;
     return fresh;
   } catch {
-    // sessionStorage may throw in private-mode or sandboxed iframes.
+    // localStorage may throw in private-mode or sandboxed iframes.
     if (!cachedSessionId) cachedSessionId = generateUuid();
     return cachedSessionId;
   }
@@ -301,6 +305,42 @@ export async function submitEmailNotify(opts: {
 
   try {
     const response = await fetch(EMAIL_NOTIFY_ENDPOINT, {
+      method: "POST",
+      headers: buildHeaders(key),
+      body: JSON.stringify({
+        session_id: getSessionId(),
+        audit_id: opts.auditId,
+        email: opts.email,
+      }),
+      keepalive: true,
+    });
+    return { ok: response.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
+ * Submit the in-tab paywall email server-authoritatively. Same idea as
+ * `submitEmailNotify` (the FAB endpoint) but hits a separate route that
+ * does NOT enqueue a send — the paywall flow already triggers the n8n
+ * email send client-side via `sendAuditReportEmail`. This call's only job
+ * is durable event recording: write `email_gate_shown` + `email_submitted`
+ * server-side and patch session.email so `linkAccountCreation` can match
+ * by email at signup time even if the JS `trackEvent` never landed.
+ *
+ * Awaitable so the paywall can `await` before navigating to /signup.
+ * Never throws.
+ */
+export async function submitEmailPaywall(opts: {
+  email: string;
+  auditId: string;
+}): Promise<{ ok: boolean }> {
+  const key = getTrackingKey();
+  if (!key) return { ok: false };
+
+  try {
+    const response = await fetch(EMAIL_PAYWALL_ENDPOINT, {
       method: "POST",
       headers: buildHeaders(key),
       body: JSON.stringify({

@@ -2,6 +2,34 @@
 
 All notable changes to the Alloro Leadgen Tool are documented here.
 
+## [0.0.2] - April 2026
+
+### LocalStorage Session Persistence + Server-Authoritative Paywall Submit
+
+Two related fixes for the leadgen → signup conversion flow.
+
+**Key Changes:**
+- **`session_id` now persists in `localStorage`** instead of `sessionStorage`.
+  Same person on the same device keeps the same session id across browser
+  closes / tab churn / iOS Safari aggressive tab eviction. Eliminates the
+  "ghost row" pattern in admin where every browser reopen produced a
+  brand-new anonymous lead row.
+- **New `submitEmailPaywall` helper** in `src/lib/tracking.ts` — POSTs to
+  the new backend `/api/leadgen/email-paywall` endpoint and is `await`ed
+  by the paywall before the user can navigate away.
+- **`EmailPaywallOverlay.handleSubmit` now awaits server-authoritative
+  recording** before calling `onEmailSubmit`. Previous fire-and-forget
+  `trackEvent` was sometimes lost on iOS Safari due to fast navigation,
+  which broke `linkAccountCreation`'s email-matching at signup time.
+- `EmailPaywallOverlay` accepts a new optional `auditId` prop. Wired
+  through from `DashboardStage`. Existing `trackEvent` stays as
+  belt-and-suspenders — server endpoint is idempotent.
+- Plan folders for `account-link-gap-and-localstorage` and
+  `mobile-responsive-refactor` checked in.
+
+**Commits:**
+- `feat: localStorage session id + server-authoritative paywall submit`
+
 ## [0.0.1] - April 2026
 
 ### Leadgen "Email Me When Ready" FAB

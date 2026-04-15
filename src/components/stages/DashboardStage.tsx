@@ -1539,7 +1539,10 @@ export const DashboardStage = ({
           {/* Email Paywall Overlay - Only shown when email not submitted */}
           {!emailSubmitted && (
             <div className="absolute inset-0 z-50 flex items-start justify-center pt-32  backdrop-blur-md rounded-3xl">
-              <EmailPaywallOverlay onEmailSubmit={handleEmailSubmit} />
+              <EmailPaywallOverlay
+                onEmailSubmit={handleEmailSubmit}
+                auditId={auditId}
+              />
             </div>
           )}
 
