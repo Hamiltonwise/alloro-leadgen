@@ -1,5 +1,18 @@
 name: Build and Deploy React
 
+# Env strategy:
+#   All build-time env vars live in a single GitHub Actions secret named
+#   `DOTENV` — its value is the full text of a `.env` file (one KEY=value
+#   per line, comments allowed). The workflow writes that secret to `.env`
+#   before `npm run build`, so Vite picks up every VITE_* var as usual.
+#
+#   To add / rotate a var:
+#     Settings → Secrets and variables → Actions → edit DOTENV.
+#   No workflow changes needed when the set of vars changes.
+#
+#   Host / SSH credentials stay as individual secrets because they're
+#   deploy-time (not build-time) and never touch Vite.
+
 on:
   push:
     branches:
@@ -12,13 +25,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install & Build React
+      - name: Write .env from DOTENV secret
         env:
-          VITE_API_BASE_URL: https://app.getalloro.com/api
-          VITE_N8N_EMAIL_URL: ${{ secrets.VITE_N8N_EMAIL_URL }}
+          DOTENV: ${{ secrets.DOTENV }}
+        run: printf '%s' "$DOTENV" > .env
+
+      - name: Install & Build React
         run: |
           npm install
-          npm run build  # This creates the 'dist' or 'build' folder
+          npm run build
 
       - name: Deploy to EC2 via SCP
         uses: appleboy/scp-action@master
@@ -26,6 +41,6 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/*" # Or "build/*" depending on your React setup
+          source: "dist/*"
           target: "~/audit"
-          strip_components: 1 # This prevents it from creating a /dist/ folder inside your web root
+          strip_components: 1
