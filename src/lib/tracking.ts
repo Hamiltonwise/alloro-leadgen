@@ -74,6 +74,7 @@ const ATTR_SENT_KEY = "leadgen_attr_sent";
 const SESSION_ENDPOINT = `${API_BASE_URL}/leadgen/session`;
 const EVENT_ENDPOINT = `${API_BASE_URL}/leadgen/event`;
 const BEACON_ENDPOINT = `${API_BASE_URL}/leadgen/beacon`;
+const EMAIL_NOTIFY_ENDPOINT = `${API_BASE_URL}/leadgen/email-notify`;
 
 let cachedSessionId: string | null = null;
 let sessionInitPromise: Promise<void> | null = null;
@@ -276,6 +277,43 @@ export function trackEvent(
       }).catch(() => undefined),
     )
     .catch(() => undefined);
+}
+
+/**
+ * Submit the FAB "Email me when ready" form. POSTs to /leadgen/email-notify
+ * which:
+ *   - upserts a row in `leadgen_email_notifications` (idempotent per
+ *     (session_id, audit_id))
+ *   - server-authoritatively writes `email_gate_shown` + `email_submitted`
+ *     funnel events
+ *   - sends the report email immediately if the audit is already complete,
+ *     otherwise leaves it for the worker to drain on completion
+ *
+ * Awaitable so the FAB can render a confirmation pulse on success. Never
+ * throws.
+ */
+export async function submitEmailNotify(opts: {
+  email: string;
+  auditId: string;
+}): Promise<{ ok: boolean }> {
+  const key = getTrackingKey();
+  if (!key) return { ok: false };
+
+  try {
+    const response = await fetch(EMAIL_NOTIFY_ENDPOINT, {
+      method: "POST",
+      headers: buildHeaders(key),
+      body: JSON.stringify({
+        session_id: getSessionId(),
+        audit_id: opts.auditId,
+        email: opts.email,
+      }),
+      keepalive: true,
+    });
+    return { ok: response.ok };
+  } catch {
+    return { ok: false };
+  }
 }
 
 /**

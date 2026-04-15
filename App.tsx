@@ -9,10 +9,9 @@ import {
   DashboardStage,
 } from "./src/components/stages";
 import { Sidebar } from "./src/components/layout";
-import { AuditErrorModal } from "./src/components/modals";
+import { EmailNotifyFab } from "./src/components/EmailNotifyFab";
 import { useAuditPolling } from "./src/hooks/useAuditPolling";
 import { API_BASE_URL } from "./utils/config";
-import { sendErrorNotificationEmail } from "./utils/emailService";
 import {
   MOCK_BUSINESS,
   MOCK_COMPETITORS,
@@ -51,7 +50,14 @@ const App = () => {
   const [selectedDataType, setSelectedDataType] = useState<
     "website" | "gbp" | null
   >(null);
-  const [showErrorModal, setShowErrorModal] = useState(false);
+  // FAB "Email me when ready" — appears at 1:20 elapsed OR immediately on
+  // confirmed audit error. Replaces the old AuditErrorModal entirely.
+  const [auditStartedAt, setAuditStartedAt] = useState<number | null>(null);
+  const [fabVisible, setFabVisible] = useState(false);
+  const [fabVariant, setFabVariant] = useState<"wait" | "error">("wait");
+  // Set to true once the FAB submit lands. Causes the dashboard's email
+  // paywall to skip — we already have the email, gating again is hostile.
+  const [paywallSatisfied, setPaywallSatisfied] = useState(false);
 
   // --- HOOKS ---
   const {
@@ -84,6 +90,7 @@ const App = () => {
       if (result.success) {
         setAuditId(result.audit_id);
         setCurrentStage("audit_started");
+        setAuditStartedAt(Date.now());
         trackEvent("audit_started", {
           audit_id: result.audit_id,
           domain,
@@ -292,12 +299,45 @@ const App = () => {
     }
   }, [competitorMapDisplayed, pendingStage, stage]);
 
-  // Show error modal when audit polling returns an error
+  // FAB visibility — replaces the old AuditErrorModal logic.
+  // 1. When audit polling reports an error, show the FAB in `error` mode
+  //    immediately (no 1:20 wait).
+  // 2. When the audit completes (stage transitions to dashboard), hide
+  //    the FAB.
   useEffect(() => {
     if (auditError && auditId) {
-      setShowErrorModal(true);
+      setFabVariant("error");
+      setFabVisible(true);
     }
   }, [auditError, auditId]);
+
+  useEffect(() => {
+    if (stage === "dashboard") {
+      setFabVisible(false);
+    }
+  }, [stage]);
+
+  // 1:20 (80s) timer — show the wait-variant FAB if the audit is still
+  // processing. Cancelled if the audit completes first OR an error fires
+  // (the error effect above takes over).
+  useEffect(() => {
+    if (!auditStartedAt || !auditId) return;
+    if (stage === "dashboard") return;
+    if (auditError) return;
+    const timer = window.setTimeout(() => {
+      setFabVariant("wait");
+      setFabVisible(true);
+    }, 80_000);
+    return () => window.clearTimeout(timer);
+  }, [auditStartedAt, auditId, stage, auditError]);
+
+  // FAB submitted: hide and mark paywall satisfied so the dashboard skips
+  // the in-tab email gate (we already have their email).
+  const handleFabSubmitted = useCallback(() => {
+    setFabVisible(false);
+    setPaywallSatisfied(true);
+    setEmailSubmitted(true);
+  }, []);
 
   // --- HANDLERS ---
   const handleSelectGBP = useCallback((gbp: SelectedGBP) => {
@@ -314,7 +354,7 @@ const App = () => {
 
   // Handle retry from error modal
   const handleErrorRetry = useCallback(async () => {
-    setShowErrorModal(false);
+    setFabVisible(false);
     setAuditId(null);
     // Re-trigger audit with same selectedGBP data
     if (selectedGBP) {
@@ -352,19 +392,6 @@ const App = () => {
     }
   }, [selectedGBP]);
 
-  // Handle email submission from error modal
-  const handleErrorEmailSubmit = useCallback(
-    async (email: string) => {
-      await sendErrorNotificationEmail({
-        userEmail: email,
-        auditId: auditId!,
-        errorMessage: auditError,
-        practiceInfo: selectedGBP?.practiceSearchString,
-      });
-    },
-    [auditId, auditError, selectedGBP]
-  );
-
   const startAudit = async (gbp: SelectedGBP) => {
     try {
       const response = await fetch(`${API_BASE_URL}/audit/start`, {
@@ -380,6 +407,7 @@ const App = () => {
       if (result.success) {
         setAuditId(result.audit_id);
         setCurrentStage("audit_started");
+        setAuditStartedAt(Date.now());
         trackEvent("audit_started", {
           audit_id: result.audit_id,
           domain: gbp.domain,
@@ -673,16 +701,16 @@ const App = () => {
         </div>
       </main>
 
-      {/* Error Modal - Shows when audit fails */}
-      <AnimatePresence>
-        {showErrorModal && (
-          <AuditErrorModal
-            isOpen={showErrorModal}
-            onRetry={handleErrorRetry}
-            onEmailSubmit={handleErrorEmailSubmit}
-          />
-        )}
-      </AnimatePresence>
+      {/* "Email me when ready" FAB — replaces the old shake-on-error modal.
+          Bottom-center floating button. Appears at 1:20 elapsed if the
+          audit is still processing, or immediately on confirmed audit
+          error. Hidden on dashboard. */}
+      <EmailNotifyFab
+        visible={fabVisible}
+        variant={fabVariant}
+        auditId={auditId}
+        onSubmitted={handleFabSubmitted}
+      />
     </div>
   );
 };
