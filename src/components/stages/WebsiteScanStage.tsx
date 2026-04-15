@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Lock } from "lucide-react";
+import { trackEvent, setCurrentStage } from "../../lib/tracking";
 
 /**
  * Website Scan Stage - Captures and analyzes website
@@ -10,11 +11,9 @@ import { Loader2, Lock } from "lucide-react";
 export const WebsiteScanStage = memo(
   ({
     desktopScreenshot,
-    mobileScreenshot,
     domain,
   }: {
     desktopScreenshot?: string | null;
-    mobileScreenshot?: string | null;
     domain?: string;
   }) => {
     const [activeMessage, setActiveMessage] = useState(
@@ -26,15 +25,20 @@ export const WebsiteScanStage = memo(
     const [messageIndex, setMessageIndex] = useState(0);
 
     // Determine if we have real screenshots or still loading
-    const hasScreenshots = !!desktopScreenshot && !!mobileScreenshot;
+    const hasScreenshots = !!desktopScreenshot;
     const displayDomain = domain || "loading...";
+
+    // Fire stage_viewed_1 once on mount
+    useEffect(() => {
+      setCurrentStage("stage_viewed_1");
+      trackEvent("stage_viewed_1");
+    }, []);
 
     const messages = useMemo(
       () => [
         "Initializing connection...",
         "Checking SSL handshake...",
         "Parsing DOM structure...",
-        "Evaluating Mobile Viewport...",
         "Calculating First Contentful Paint...",
         "Scanning images for Alt tags...",
         "Analyzing Color Contrast...",
@@ -52,7 +56,6 @@ export const WebsiteScanStage = memo(
       () => [
         "Speed OK",
         "SSL Secure",
-        "Mobile Ready",
         "Fonts Loaded",
         "JS Minified",
         "Images Optimized",
@@ -184,18 +187,8 @@ export const WebsiteScanStage = memo(
     );
 
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 bg-gray-50">
+      <div className="h-full flex flex-col items-center justify-center p-8 bg-beige">
         <div className="text-center mb-8 relative z-10">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <img
-              src="/logo.png"
-              alt="Alloro"
-              className="w-8 h-8 object-contain"
-            />
-            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Alloro AI
-            </span>
-          </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
             {hasScreenshots
               ? "Analyzing Your Digital Presence"
@@ -209,15 +202,15 @@ export const WebsiteScanStage = memo(
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center justify-center w-full max-w-6xl relative">
+        <div className="flex items-center justify-center w-full max-w-6xl relative">
           {/* Decorative Background Elements */}
           <div className="absolute -inset-10 bg-gradient-to-r from-blue-50 to-brand-50 opacity-50 blur-3xl rounded-full"></div>
 
-          {/* Desktop View - Monitor Frame with Browser */}
+          {/* Desktop View - Monitor Frame with Browser (mobile mockup intentionally removed) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative w-full md:w-3/4 z-10"
+            className="relative w-full max-w-4xl z-10"
           >
             {/* Monitor SVG Frame */}
             <div className="relative">
@@ -311,63 +304,6 @@ export const WebsiteScanStage = memo(
             </div>
           </motion.div>
 
-          {/* Mobile View - Better browser-like design */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="relative w-1/4 max-w-[240px] aspect-[9/19] bg-gray-900 rounded-[2.5rem] border-[6px] border-gray-800 overflow-hidden shadow-2xl z-20 ring-4 ring-gray-700/50"
-          >
-            {/* Dynamic Island / Notch */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-30 flex items-center justify-center">
-              <div className="w-12 h-3 bg-gray-900 rounded-full"></div>
-            </div>
-
-            {/* Mobile Browser Header */}
-            <div className="absolute top-0 left-0 right-0 h-16 bg-gray-800/95 backdrop-blur-sm z-20 pt-8 px-3">
-              <div className="flex items-center gap-2 bg-gray-700/60 rounded-full px-3 py-1.5 border border-gray-600/50">
-                {hasScreenshots ? (
-                  <Lock className="w-2.5 h-2.5 text-green-400" />
-                ) : (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin text-gray-400" />
-                )}
-                <span
-                  className={`text-[10px] font-medium truncate ${
-                    hasScreenshots ? "text-gray-300" : "text-gray-500"
-                  }`}
-                >
-                  {displayDomain}
-                </span>
-              </div>
-            </div>
-
-            {/* Screenshot container OR Loading skeleton */}
-            <div className="absolute inset-0 top-16 overflow-hidden">
-              {hasScreenshots ? (
-                <motion.img
-                  src={mobileScreenshot}
-                  alt="Mobile Screenshot"
-                  className="w-full h-auto object-cover object-top"
-                  style={{ minHeight: "100%" }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                />
-              ) : (
-                <BrowserLoadingSkeleton isMobile />
-              )}
-            </div>
-
-            {/* Scan Line - Green - Always rendered to prevent animation restart */}
-            <div
-              className={`absolute left-0 right-0 h-1 bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.8)] z-10 transition-opacity duration-300 ${
-                hasScreenshots ? "opacity-100" : "opacity-0"
-              }`}
-              style={{
-                animation: "scanVerticalMobile 1.5s linear infinite 0.5s",
-              }}
-            />
-          </motion.div>
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, Mail, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { trackEvent, setCurrentStage } from "../lib/tracking";
 
 interface EmailPaywallOverlayProps {
   onEmailSubmit: (email: string) => Promise<void>;
@@ -12,6 +13,12 @@ export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fire email_gate_shown once on mount
+  useEffect(() => {
+    setCurrentStage("email_gate_shown");
+    trackEvent("email_gate_shown");
+  }, []);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,6 +43,9 @@ export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
 
     try {
       await onEmailSubmit(email);
+      // Success — fire email_submitted after the handler resolves
+      setCurrentStage("email_submitted");
+      trackEvent("email_submitted", { email });
       // Success handled by parent component
     } catch (err) {
       setError(
@@ -93,6 +103,10 @@ export const EmailPaywallOverlay: React.FC<EmailPaywallOverlayProps> = ({
               onChange={(e) => {
                 setEmail(e.target.value);
                 setError(null);
+              }}
+              onFocus={() => trackEvent("email_field_focused")}
+              onBlur={(e) => {
+                if (!e.target.value) trackEvent("email_field_blurred_empty");
               }}
               placeholder="your@email.com"
               disabled={isSubmitting}

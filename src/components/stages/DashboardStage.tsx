@@ -24,6 +24,7 @@ import {
   Sparkles,
   ArrowRight,
   Calendar,
+  UserPlus,
 } from "lucide-react";
 import {
   CircularProgress,
@@ -49,6 +50,30 @@ import {
   BusinessProfile,
   Competitor,
 } from "../../types";
+import { trackEvent, setCurrentStage, getSessionId } from "../../lib/tracking";
+
+/**
+ * Append `?ls={sessionId}` to a signup URL, preserving any existing query
+ * params. Resolved at click-time so the tracking session id is always current.
+ */
+function buildSignupHref(base: string): string {
+  const id = getSessionId();
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}ls=${encodeURIComponent(id)}`;
+}
+
+/**
+ * Fire tracking + rewrite href to include `?ls={sessionId}` just before the
+ * browser follows the link. Safe for `<a target="_blank">` because assigning
+ * `e.currentTarget.href` runs synchronously before navigation.
+ */
+function handleSignupClick(
+  e: React.MouseEvent<HTMLAnchorElement>,
+  stage: string,
+): void {
+  trackEvent("cta_clicked_create_account", { event_data: { stage } });
+  e.currentTarget.href = buildSignupHref("https://app.getalloro.com/signup");
+}
 
 /**
  * Dashboard Stage - Final results and analysis display
@@ -58,6 +83,7 @@ import {
 export const DashboardStage = ({
   business,
   websiteData,
+  hasWebsiteData = true,
   gbpData,
   screenshotUrl,
   auditId,
@@ -71,7 +97,8 @@ export const DashboardStage = ({
   setSelectedDataType,
 }: {
   business: BusinessProfile;
-  websiteData: WebsiteAnalysis;
+  websiteData: WebsiteAnalysis | null;
+  hasWebsiteData?: boolean;
   gbpData: GBPAnalysis;
   screenshotUrl?: string;
   auditId?: string | null;
@@ -92,6 +119,25 @@ export const DashboardStage = ({
 
   const reviewGap = topCompetitor.reviewsCount - business.reviewsCount;
 
+  // Fire stage_viewed_5 + results_viewed once on mount (dashboard is final results screen).
+  // Also schedule a "report_engaged_1min" event after 60s of dwell time — strong
+  // signal that the user actually consumed the report rather than bouncing.
+  useEffect(() => {
+    setCurrentStage("stage_viewed_5");
+    trackEvent("stage_viewed_5");
+    setCurrentStage("results_viewed");
+    trackEvent("results_viewed");
+
+    const engagedTimer = window.setTimeout(() => {
+      setCurrentStage("report_engaged_1min");
+      trackEvent("report_engaged_1min");
+    }, 60_000);
+
+    return () => {
+      window.clearTimeout(engagedTimer);
+    };
+  }, []);
+
   // Handle email submission
   const handleEmailSubmit = async (email: string) => {
     if (!auditId) {
@@ -109,7 +155,7 @@ export const DashboardStage = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-100 scroll-smooth">
+    <div className="h-full overflow-y-auto bg-beige scroll-smooth">
       {/* Action Items Modal */}
       <AnimatePresence>
         {modalOpen && (
@@ -150,11 +196,11 @@ export const DashboardStage = ({
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-4">
             <motion.div
-              className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center"
+              className="w-12 h-12 shrink-0 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center"
               animate={{ rotate: [0, 5, -5, 0] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              <Sparkles className="w-5 h-5 text-white" />
+              <Sparkles className="w-6 h-6 text-white" />
             </motion.div>
             <div>
               <p className="text-sm font-bold">
@@ -167,15 +213,16 @@ export const DashboardStage = ({
             </div>
           </div>
           <motion.a
-            href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+            href="https://app.getalloro.com/signup"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => handleSignupClick(e, "dashboard_header")}
             className="bg-white text-brand-600 hover:bg-gray-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Phone className="w-4 h-4" />
-            Schedule Strategy Call
+            <UserPlus className="w-4 h-4" />
+            Create Your Free Account
             <ArrowRight className="w-4 h-4" />
           </motion.a>
         </div>
@@ -193,32 +240,41 @@ export const DashboardStage = ({
           {/* Decorative gradient */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-100/50 to-transparent rounded-full -mr-32 -mt-32 pointer-events-none" />
 
-          <div className="flex flex-col lg:flex-row gap-8 relative z-10">
-            {/* Screenshot Preview */}
+          <div className="flex flex-col lg:flex-row gap-4 md:gap-8 relative z-10">
+            {/* Screenshot Preview — replaced with greyed icon if no website */}
             <motion.div
               className="lg:w-1/3"
               initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
               animate={{ opacity: 1, scale: 1, rotateY: 0 }}
               transition={{ duration: 0.7, delay: 0.3, type: "spring" }}
             >
-              <div className="rounded-xl overflow-hidden shadow-xl border border-gray-200 aspect-video relative group">
-                <img
-                  src={screenshotUrl || MOCK_SCREENSHOT_DESKTOP}
-                  alt="Website Preview"
-                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <motion.div
-                  className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg shadow-md"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  <span className="text-xs font-semibold text-gray-700">
-                    Live Preview
+              {hasWebsiteData && screenshotUrl ? (
+                <div className="rounded-xl overflow-hidden shadow-xl border border-gray-200 aspect-video relative group">
+                  <img
+                    src={screenshotUrl}
+                    alt="Website Preview"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <motion.div
+                    className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg shadow-md"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                  >
+                    <span className="text-xs font-semibold text-gray-700">
+                      Live Preview
+                    </span>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-300 aspect-video flex flex-col items-center justify-center bg-gray-50">
+                  <Globe className="w-10 h-10 text-gray-300 mb-2" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    No website
                   </span>
-                </motion.div>
-              </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Report Info */}
@@ -228,34 +284,29 @@ export const DashboardStage = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4, type: "spring" }}
             >
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 mb-3">
                 <img
                   src="/logo.png"
                   alt="Alloro"
-                  className="w-10 h-10 object-contain"
+                  className="w-5 h-5 object-contain"
                 />
-                <div>
-                  <motion.h1
-                    className="text-2xl font-bold text-brand-500"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    Alloro Practice Intelligence Report
-                  </motion.h1>
-                  <p className="text-xs text-gray-500 font-medium">
-                    Powered by AI Analysis Engine
-                  </p>
-                </div>
+                <motion.span
+                  className="text-[11px] font-bold text-brand-500 uppercase tracking-wider"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  Alloro Practice Intelligence Report
+                </motion.span>
               </div>
               <motion.h2
-                className="text-2xl font-semibold text-gray-800 mb-4 truncate max-w-full"
+                className="font-heading text-2xl md:text-[2.25rem] font-bold text-gray-900 mb-4 tracking-tight truncate max-w-full"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                title={business.website}
+                title={business.title}
               >
-                {business.website}
+                {business.title}
               </motion.h2>
 
               <div className="space-y-3 text-gray-600">
@@ -276,19 +327,22 @@ export const DashboardStage = ({
                 ].map((item, idx) => (
                   <motion.div
                     key={idx}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 min-w-0"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.7 + idx * 0.1 }}
                   >
-                    <span className="font-medium text-gray-500">
+                    <span className="font-medium text-gray-500 shrink-0">
                       {item.label}
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span
+                      className="flex items-center gap-1 min-w-0"
+                      title={typeof item.value === "string" ? item.value : undefined}
+                    >
                       {item.icon && (
-                        <item.icon className="w-4 h-4 text-brand-500" />
+                        <item.icon className="w-4 h-4 text-brand-500 shrink-0" />
                       )}
-                      {item.value}
+                      <span className="truncate">{item.value}</span>
                     </span>
                   </motion.div>
                 ))}
@@ -345,27 +399,40 @@ export const DashboardStage = ({
               </h3>
             </div>
             <div className="flex items-center gap-6 relative z-10">
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{
-                  duration: 1,
-                  delay: 0.6,
-                  type: "spring",
-                  stiffness: 80,
-                }}
-              >
-                <GradeBadge grade={websiteData.overall_grade} />
-              </motion.div>
-              <div className="flex-1 flex items-center justify-center">
-                <CircularProgress
-                  score={Math.round(websiteData.overall_score)}
-                  label="Overall Score"
-                  size={100}
-                  strokeWidth={8}
-                  delay={0.7}
-                />
-              </div>
+              {hasWebsiteData && websiteData ? (
+                <>
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      duration: 1,
+                      delay: 0.6,
+                      type: "spring",
+                      stiffness: 80,
+                    }}
+                  >
+                    <GradeBadge grade={websiteData.overall_grade} />
+                  </motion.div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <CircularProgress
+                      score={Math.round(websiteData.overall_score)}
+                      label="Overall Score"
+                      size={100}
+                      strokeWidth={8}
+                      delay={0.7}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center py-2 opacity-60 grayscale">
+                  <div className="text-center">
+                    <div className="text-3xl font-black text-gray-400 mb-1">—</div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      No website analyzed
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -543,34 +610,72 @@ export const DashboardStage = ({
           />
 
           <div className="relative z-10 p-8 md:p-12 text-center">
-            <p className="text-white/90 flex gap-3 items-center justify-center text-sm font-bold md:text-base max-w-2xl mx-auto mb-6">
-              Alloro Verdict{" "}
-              <span className="h-[.5px] w-[20px] bg-white/50 inline-block"></span>
-              <span className="text-xs bg-yellow-100 text-yellow-800 px-5 py-1.5 = rounded-full">
-                Good
-              </span>
-            </p>
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              But good enough isn't winning. <br /> Your practice has more
-              potential.
-            </h3>
-            <p className="text-white/90 text-sm md:text-base max-w-2xl mx-auto mb-6">
-              Your scores show a solid foundation, but competitors with stronger
-              execution are capturing the patients you're missing. Alloro helps
-              you close those gaps and outperform the average practice in your
-              area.
-            </p>
+            {(() => {
+              const candidateGrades = [
+                hasWebsiteData && websiteData ? websiteData.overall_grade : null,
+                gbpData?.gbp_grade,
+                gbpData?.competitor_analysis?.rank_grade,
+              ]
+                .filter((g): g is string => typeof g === "string" && g.length > 0)
+                .map((g) => g.charAt(0).toUpperCase());
+              const isOutranked = candidateGrades.some(
+                (g) => g === "D" || g === "F"
+              );
+              return (
+                <>
+                  <p className="text-white/90 flex gap-3 items-center justify-center text-sm font-bold md:text-base max-w-2xl mx-auto mb-6">
+                    Alloro Verdict{" "}
+                    <span className="h-[.5px] w-[20px] bg-white/50 inline-block"></span>
+                    <span
+                      className={`text-xs px-5 py-1.5 rounded-full ${
+                        isOutranked
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {isOutranked ? "Outranked" : "Good"}
+                    </span>
+                  </p>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                    {!isOutranked && (
+                      <>
+                        But good enough isn't winning. <br />
+                      </>
+                    )}
+                    Your practice has more potential.
+                  </h3>
+                  <p className="text-white/90 text-sm md:text-base max-w-2xl mx-auto mb-6">
+                    {isOutranked ? (
+                      <>
+                        Your scores show bad foundations, and competitors with
+                        stronger execution are capturing the patients you're
+                        missing. Alloro helps you close those gaps and
+                        outperform the average practice in your area.
+                      </>
+                    ) : (
+                      <>
+                        Your scores show a solid foundation, but competitors
+                        with stronger execution are capturing the patients
+                        you're missing. Alloro helps you close those gaps and
+                        outperform the average practice in your area.
+                      </>
+                    )}
+                  </p>
+                </>
+              );
+            })()}
 
             <motion.a
-              href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+              href="https://app.getalloro.com/signup"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-white text-brand-600 hover:bg-gray-100 px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg"
+              onClick={(e) => handleSignupClick(e, "dashboard_overall_cta")}
+              className="inline-flex items-center gap-2 bg-white text-brand-600 hover:bg-gray-100 px-6 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-lg"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Calendar className="w-5 h-5" />
-              Book Your Strategy Call
+              <UserPlus className="w-5 h-5" />
+              Create Your Free Account
               <ArrowRight className="w-5 h-5" />
             </motion.a>
 
@@ -677,15 +782,16 @@ export const DashboardStage = ({
                     Start Outranking Competitors
                   </p>
                   <motion.a
-                    href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                    href="https://app.getalloro.com/signup"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                    onClick={(e) => handleSignupClick(e, "dashboard_rank_cta")}
+                    className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-lg"
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Calendar className="w-5 h-5" />
-                    Book Your Strategy Call
+                    <UserPlus className="w-5 h-5" />
+                    Create Your Free Account
                     <ArrowRight className="w-5 h-5" />
                   </motion.a>
                 </motion.div>
@@ -772,20 +878,55 @@ export const DashboardStage = ({
                   Optimize Your Google Business Profile
                 </p>
                 <motion.a
-                  href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                  href="https://app.getalloro.com/signup"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                  onClick={(e) => handleSignupClick(e, "dashboard_gbp_cta")}
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-lg"
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Calendar className="w-5 h-5" />
-                  Book Your Strategy Call
+                  <UserPlus className="w-5 h-5" />
+                  Create Your Free Account
                   <ArrowRight className="w-5 h-5" />
                 </motion.a>
               </motion.div>
             </motion.div>
-            {/* Website Performance Metrics - Horizontal Progress Bars */}
+            {/* Website Performance Metrics — only when a website was analyzed.
+                When the user opted "no website yet" we show a minimal
+                placeholder card with a CTA to create an account + website. */}
+            {!hasWebsiteData && (
+              <motion.div
+                className="bg-white rounded-2xl shadow-sm border border-dashed border-gray-300 p-6 md:p-8 mb-8 text-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Globe className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg md:text-xl font-bold text-gray-700 mb-2">
+                  No Website Yet?
+                </h3>
+                <p className="text-sm text-gray-500 max-w-md mx-auto mb-5">
+                  Create your free Alloro account and we'll help you launch
+                  a high-performing website built for your practice.
+                </p>
+                <motion.a
+                  href="https://app.getalloro.com/signup"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) =>
+                    handleSignupClick(e, "dashboard_no_website_cta")
+                  }
+                  className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Create Free Account &amp; Build Your Website
+                  <ArrowRight className="w-4 h-4" />
+                </motion.a>
+              </motion.div>
+            )}
+            {hasWebsiteData && (
             <motion.div
               className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8 overflow-hidden relative pt-10"
               custom={4}
@@ -866,26 +1007,391 @@ export const DashboardStage = ({
                   Improve Your Website Performance
                 </p>
                 <motion.a
-                  href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                  href="https://app.getalloro.com/signup"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-xl font-bold text-base transition-all shadow-lg"
+                  onClick={(e) => handleSignupClick(e, "dashboard_website_cta")}
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-lg"
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Calendar className="w-5 h-5" />
-                  Book Your Strategy Call
+                  <UserPlus className="w-5 h-5" />
+                  Create Your Free Account
                   <ArrowRight className="w-5 h-5" />
                 </motion.a>
               </motion.div>
             </motion.div>
+            )}
 
-            {/* Blurred Detailed Analysis - Paywall */}
+            {/* Blurred Reconstructed Alloro Dashboard - Paywall */}
             <div className="relative">
-              {/* Blurred Content */}
-              <div className="blur-sm select-none pointer-events-none">
-                {/* Detailed GBP Analysis */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
+              {/* Blurred Content — static mockup matching the real Alloro
+                  client dashboard (DashboardOverview.tsx) layout, colors,
+                  and typography. Scaled down to fit this card. */}
+              {/*
+                Outer `overflow-hidden` clips the blur halo so the dark
+                sidebar's color can't bleed past the mockup's rounded edges
+                onto the beige surround. Scale-[0.97] adds a subtle inset so
+                the clip feels intentional rather than flush.
+              */}
+              <div className="blur-[2px] select-none pointer-events-none rounded-3xl overflow-hidden scale-[0.97] origin-top">
+                {/* App shell — matches the real Alloro app: dark navy sidebar
+                    + beige main content with the Practice Hub layout. */}
+                <div className="rounded-3xl border border-black/10 overflow-hidden mb-6 flex bg-beige">
+                  {/* Sidebar — dark navy like the real app */}
+                  <div className="hidden md:flex w-48 shrink-0 flex-col bg-[#1a2433] text-white p-3 gap-1">
+                    {/* Brand */}
+                    <div className="flex items-center justify-between px-2 pt-1 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-brand-500" />
+                        <div>
+                          <div className="font-heading text-sm font-bold text-white leading-none">
+                            Alloro
+                          </div>
+                          <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mt-1">
+                            Intelligence
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-4 h-4 rounded bg-white/10" />
+                    </div>
+
+                    {/* NAVIGATION section */}
+                    <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30 px-2 mb-1 mt-2">
+                      Navigation
+                    </div>
+                    {[
+                      { label: "Practice Hub", active: true },
+                      { label: "Referrals Hub" },
+                      { label: "Local Rankings" },
+                      { label: "Websites" },
+                    ].map((n, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+                          n.active
+                            ? "bg-brand-500/20 text-brand-300"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <div
+                          className={`w-3 h-3 rounded-sm ${
+                            n.active ? "bg-brand-400" : "bg-white/20"
+                          }`}
+                        />
+                        <span className="text-[10px] font-semibold">
+                          {n.label}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* DISCOVERY section */}
+                    <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30 px-2 mb-1 mt-3">
+                      Discovery
+                    </div>
+                    {[
+                      { label: "To-Do List" },
+                      { label: "Notifications" },
+                    ].map((n, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md text-white/60"
+                      >
+                        <div className="w-3 h-3 rounded-sm bg-white/20" />
+                        <span className="text-[10px] font-semibold">
+                          {n.label}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* LOCATION section */}
+                    <div className="mt-auto pt-3">
+                      <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30 px-2 mb-1">
+                        Location
+                      </div>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/5 mb-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-brand-400" />
+                        <span className="text-[10px] font-semibold text-white">
+                          Gainesville
+                        </span>
+                        <div className="ml-auto w-2 h-2 rounded bg-white/30" />
+                      </div>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
+                        <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-brand-400" />
+                        </div>
+                        <span className="text-[10px] text-white/70">
+                          One Endodontics
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Main content — beige */}
+                  <div className="flex-1 bg-beige min-w-0 flex flex-col">
+                    {/* Top bar */}
+                    <div className="flex items-center justify-between px-5 md:px-6 py-3 border-b border-black/5">
+                      <div className="flex items-center gap-2">
+                        {/* Mobile: hamburger + logo + bell */}
+                        <div className="md:hidden flex items-center gap-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="w-4 h-0.5 bg-gray-700" />
+                            <div className="w-4 h-0.5 bg-gray-700" />
+                            <div className="w-4 h-0.5 bg-gray-700" />
+                          </div>
+                          <div className="w-6 h-6 rounded-md bg-brand-500" />
+                        </div>
+                        <div className="hidden md:block">
+                          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">
+                            Practice Hub
+                          </div>
+                          <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-gray-400 mt-0.5">
+                            Visioning of your practice
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="md:hidden w-4 h-4 rounded-full border border-gray-400" />
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                          <span className="hidden md:inline text-[9px] font-bold uppercase tracking-wider text-green-600">
+                            Live Updates On
+                          </span>
+                          <span className="md:hidden text-[10px] font-bold text-green-600">
+                            ON
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5 md:p-6">
+                      {/* Tag row */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <span className="text-[9px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-500">
+                          · Latest Update · Apr 15
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full bg-green-500/10 text-green-600">
+                          · Growth Looks Good
+                        </span>
+                      </div>
+
+                      {/* Greeting */}
+                      <h3 className="font-heading text-2xl md:text-4xl font-bold tracking-tight text-gray-900 mb-2">
+                        Good Morning, Saif.
+                      </h3>
+                      <p className="text-xs md:text-sm text-gray-500 mb-5 leading-snug">
+                        Welcome to your practice dashboard. We're loading your
+                        latest insights.
+                      </p>
+
+                      {/* Rankings hero card */}
+                      <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-4 mb-5">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full bg-gray-900 text-white">
+                              Rankings
+                            </span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+                              Gainesville, VA
+                            </span>
+                          </div>
+                          <p className="font-heading text-xl md:text-2xl font-bold text-gray-900 leading-tight">
+                            You're ranked{" "}
+                            <span className="text-brand-500">#1 of 3</span>{" "}
+                            locally.
+                          </p>
+                        </div>
+                        <div className="md:border-l md:border-black/5 md:pl-5 flex items-center gap-3">
+                          <div>
+                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">
+                              Visibility Score
+                            </div>
+                            <div className="text-4xl md:text-5xl font-black font-heading tracking-tighter text-gray-900 leading-none">
+                              98
+                            </div>
+                          </div>
+                          <div className="bg-brand-500 text-white text-[10px] font-bold px-3 py-2 rounded-full flex items-center gap-1">
+                            See Why →
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* KPI tiles row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        {[
+                          { label: "New Patients", val: "142", trend: "+18%" },
+                          { label: "Reviews", val: "4.8", trend: "+0.2" },
+                          { label: "GBP Views", val: "12.4k", trend: "+24%" },
+                          { label: "Call Clicks", val: "847", trend: "+9%" },
+                        ].map((k, i) => (
+                          <div
+                            key={i}
+                            className="bg-white rounded-2xl border border-black/5 shadow-sm p-4"
+                          >
+                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
+                              {k.label}
+                            </div>
+                            <div className="flex items-baseline justify-between">
+                              <span className="font-heading text-2xl md:text-3xl font-black tracking-tighter text-gray-900 leading-none">
+                                {k.val}
+                              </span>
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-green-100 text-green-700">
+                                {k.trend}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Chart + Sparkline row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                        {/* Bar chart — Patient Acquisition */}
+                        <div className="md:col-span-2 bg-white rounded-2xl border border-black/5 shadow-sm p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+                                Patient Acquisition
+                              </div>
+                              <div className="font-heading text-base font-bold text-gray-900 mt-0.5">
+                                Trending up · 12 weeks
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-green-100 text-green-700">
+                              +32%
+                            </span>
+                          </div>
+                          <div className="h-24 flex items-end justify-between gap-1.5">
+                            {[38, 52, 44, 60, 58, 72, 68, 80, 76, 88, 94, 102].map(
+                              (h, i) => (
+                                <div
+                                  key={i}
+                                  className="flex-1 bg-gradient-to-t from-brand-500 to-brand-300 rounded-sm"
+                                  style={{ height: `${h}%` }}
+                                />
+                              )
+                            )}
+                          </div>
+                          <div className="flex justify-between text-[8px] text-gray-400 font-semibold uppercase tracking-wider mt-2">
+                            <span>W1</span>
+                            <span>W4</span>
+                            <span>W8</span>
+                            <span>W12</span>
+                          </div>
+                        </div>
+
+                        {/* Donut — Review Sentiment */}
+                        <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
+                          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">
+                            Sentiment
+                          </div>
+                          <div className="relative flex items-center justify-center h-24">
+                            <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
+                              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#e5e7eb" strokeWidth="3" />
+                              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#22c55e" strokeWidth="3" strokeDasharray="88, 100" strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="font-heading text-2xl font-black tracking-tighter text-gray-900 leading-none">
+                                88%
+                              </span>
+                              <span className="text-[9px] font-semibold text-gray-400 mt-0.5">
+                                Positive
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Data table — Top Referral Sources */}
+                      <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4 mb-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+                            Top Referral Sources
+                          </div>
+                          <span className="text-[9px] font-semibold text-gray-400">
+                            Last 30 days
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {[
+                            { src: "Google Search", val: 412, pct: 64 },
+                            { src: "Direct", val: 182, pct: 28 },
+                            { src: "Instagram", val: 74, pct: 12 },
+                            { src: "Facebook", val: 38, pct: 6 },
+                          ].map((row, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 text-xs"
+                            >
+                              <span className="w-24 text-gray-700 font-semibold shrink-0">
+                                {row.src}
+                              </span>
+                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-brand-500 rounded-full"
+                                  style={{ width: `${row.pct}%` }}
+                                />
+                              </div>
+                              <span className="w-10 text-right font-black text-gray-900">
+                                {row.val}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Bottom row — 2 widgets */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
+                          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
+                            Competitor Gap
+                          </div>
+                          <div className="flex items-baseline gap-2 mb-3">
+                            <span className="font-heading text-3xl font-black tracking-tighter text-gray-900 leading-none">
+                              −$24k
+                            </span>
+                            <span className="text-[10px] font-bold text-red-600">
+                              monthly loss
+                            </span>
+                          </div>
+                          <div className="h-12 flex items-end gap-1">
+                            {[30, 45, 38, 55, 48, 62, 58, 70, 65, 78, 82, 90].map(
+                              (h, i) => (
+                                <div
+                                  key={i}
+                                  className="flex-1 bg-gradient-to-t from-red-500/60 to-red-300/60 rounded-sm"
+                                  style={{ height: `${h}%` }}
+                                />
+                              )
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
+                          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">
+                            Appointments Booked
+                          </div>
+                          <div className="flex items-baseline gap-2 mb-3">
+                            <span className="font-heading text-3xl font-black tracking-tighter text-gray-900 leading-none">
+                              287
+                            </span>
+                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-md">
+                              +14%
+                            </span>
+                          </div>
+                          <svg viewBox="0 0 100 40" className="w-full h-10">
+                            <polyline
+                              fill="none"
+                              stroke="#d66853"
+                              strokeWidth="2"
+                              points="0,32 10,28 20,30 30,22 40,24 50,16 60,18 70,10 80,12 90,6 100,8"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6 hidden">
                   <h3 className="text-xl font-bold text-gray-800 mb-6">
                     Detailed GBP Analysis
                   </h3>
@@ -922,62 +1428,17 @@ export const DashboardStage = ({
                   </div>
                 </div>
 
-                {/* Detailed Website Analysis */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-6">
-                    Detailed Website Analysis
-                  </h3>
-                  <div className="space-y-6">
-                    {websiteData.pillars.map((pillar, idx) => (
-                      <div
-                        key={idx}
-                        className="border-b border-gray-100 pb-6 last:border-0"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <h4 className="font-bold text-gray-900">
-                            {pillar.category}
-                          </h4>
-                          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                            {pillar.score}%
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-sm">
-                          {pillar.key_finding}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Items */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
-                  <h3 className="text-xl font-bold text-gray-800 mb-6">
-                    30-Day Action Plan
-                  </h3>
-                  <div className="space-y-4">
-                    {[
-                      "Implement review generation campaign to close the gap",
-                      "Optimize GBP posts for weekend availability keywords",
-                      "Add 5 new high-quality photos monthly",
-                      "Set up automated review response system",
-                      "Create location-specific landing pages",
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          {idx + 1}
-                        </div>
-                        <span className="text-gray-700">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* Intentionally: nothing below the app-shell mockup. The
+                    old "Detailed Website Analysis" + "30-Day Action Plan"
+                    text blocks were replaced by statistical widgets inside
+                    the app-shell main column above, which is why the sidebar
+                    now fills the full backdrop height. */}
               </div>
 
-              {/* Paywall Overlay - Simplified Dark Card with Single CTA */}
-              <div className="absolute inset-0 flex items-start justify-center pt-16 bg-gradient-to-b from-transparent via-white/90 to-white">
+              {/* Paywall Overlay — evenly translucent so the sidebar under
+                  the backdrop doesn't get a ghost-fade bleed on its right
+                  edge. */}
+              <div className="absolute inset-0 flex items-start justify-center pt-16 bg-white/70 backdrop-blur-[2px]">
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0, y: 30 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -998,32 +1459,76 @@ export const DashboardStage = ({
 
                   <div className="relative z-10">
                     <motion.div
-                      className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center mx-auto mb-3"
-                      animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
-                      transition={{ duration: 3, repeat: Infinity }}
+                      className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center mx-auto mb-3"
+                      animate={{
+                        rotate: [0, -12, 12, -8, 8, -4, 4, 0],
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        repeatDelay: 2,
+                        ease: "easeInOut",
+                      }}
                     >
                       <Lock className="w-5 h-5 text-white" />
                     </motion.div>
-                    <h2 className="text-lg font-bold mb-1">
-                      Get help from Alloro team
+                    <h2 className="font-heading text-lg md:text-xl font-semibold mb-4 leading-snug">
+                      You're one step away from
+                      <br />
+                      unlocking more patients.
                     </h2>
-                    <p className="text-gray-400 mb-4 text-xs leading-relaxed">
-                      Unlock full detailed analysis & personalized growth plan
-                      by booking a free strategy call with our experts.
-                    </p>
+
+                    <ul className="text-left space-y-2 mb-5 max-w-xs mx-auto">
+                      {[
+                        {
+                          icon: Globe,
+                          tint: "bg-blue-500/15 text-blue-300",
+                          text: "A website built to convert visitors into patients",
+                        },
+                        {
+                          icon: TrendingUp,
+                          tint: "bg-green-500/15 text-green-300",
+                          text: "Stronger digital presence across Google + maps",
+                        },
+                        {
+                          icon: Calendar,
+                          tint: "bg-brand-500/20 text-brand-300",
+                          text: "More booked appointments, every month",
+                        },
+                      ].map((b, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-2.5 p-2 rounded-lg bg-white/5 border border-white/10"
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${b.tint}`}
+                          >
+                            <b.icon className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs text-gray-100 leading-snug">
+                            {b.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
                     <motion.a
-                      href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+                      href="https://app.getalloro.com/signup"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 px-5 rounded-lg transition-all shadow-lg text-sm flex items-center justify-center gap-2"
+                      onClick={(e) =>
+                        handleSignupClick(e, "dashboard_paywall_cta")
+                      }
+                      className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-5 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
-                      <Phone className="w-4 h-4" />
-                      Book Strategy Call
+                      <UserPlus className="w-4 h-4" />
+                      Create Your Free Account
+                      <ArrowRight className="w-4 h-4" />
                     </motion.a>
-                    <p className="text-[10px] text-gray-500 mt-3">
-                      100% Free • No Credit Card Required
+                    <p className="text-[10px] text-gray-500 mt-2.5">
+                      100% Free · Easy Onboarding
                     </p>
                   </div>
                 </motion.div>
@@ -1036,6 +1541,46 @@ export const DashboardStage = ({
             <div className="absolute inset-0 z-50 flex items-start justify-center pt-32  backdrop-blur-md rounded-3xl">
               <EmailPaywallOverlay onEmailSubmit={handleEmailSubmit} />
             </div>
+          )}
+
+          {/* Floating CTA — MOBILE ONLY. Compact full-width bar pinned to
+              the viewport edges (left-3/right-3) so it stays clear of the
+              ancestor motion.div transforms that would break a centered
+              fixed element. Desktop version lives in the Sidebar. */}
+          {emailSubmitted && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
+              className="fixed bottom-3 left-3 right-3 z-40 px-4 py-3 rounded-xl md:hidden flex flex-col items-center gap-2"
+              style={{
+                background: "rgba(255, 255, 255, 0.6)",
+                backdropFilter: "blur(28px)",
+                WebkitBackdropFilter: "blur(28px)",
+                border: "1px solid rgba(15, 23, 42, 0.12)",
+                boxShadow: "0 8px 28px rgba(0, 0, 0, 0.10)",
+              }}
+            >
+              <p className="text-[13px] font-semibold text-gray-700 leading-snug text-center">
+                Knowing isn't enough. Execution matters. Let{" "}
+                <span className="text-brand-500">Alloro</span> help.
+              </p>
+              <a
+                href="https://app.getalloro.com/signup"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) =>
+                  handleSignupClick(e, "dashboard_mobile_floating_cta")
+                }
+                className="block w-full text-center px-4 py-2.5 text-white font-bold rounded-full text-sm"
+                style={{
+                  backgroundColor: "#d66853",
+                  boxShadow: "0 6px 18px rgba(214, 104, 83, 0.4)",
+                }}
+              >
+                Create Your Free Account
+              </a>
+            </motion.div>
           )}
         </div>
       </div>

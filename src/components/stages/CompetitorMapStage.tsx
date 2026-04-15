@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Star, Users, Loader2 } from "lucide-react";
 import { BusinessProfile, Competitor } from "../../types";
+import { trackEvent, setCurrentStage } from "../../lib/tracking";
 
 /**
  * Competitor Map Stage - Displays competitors on a map
@@ -20,6 +21,12 @@ export const CompetitorMapStage = memo(
   }) => {
     const [showingCompetitors, setShowingCompetitors] = useState<number[]>([]);
     const animationStartedRef = React.useRef<string>("");
+
+    // Fire stage_viewed_4 once on mount (competitor map screen)
+    useEffect(() => {
+      setCurrentStage("stage_viewed_4");
+      trackEvent("stage_viewed_4");
+    }, []);
 
     // Deduplicate competitors by unique location to prevent overlapping pins
     const uniqueCompetitors = useMemo(() => {
@@ -213,7 +220,7 @@ export const CompetitorMapStage = memo(
     );
 
     return (
-      <div className="h-full flex flex-col relative overflow-hidden bg-slate-50">
+      <div className="h-full flex flex-col relative overflow-hidden bg-beige">
         {/* Info Panel */}
         <div className="absolute top-6 left-6 z-20 bg-white/95 backdrop-blur-sm p-5 rounded-2xl shadow-xl max-w-sm border border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">

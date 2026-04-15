@@ -7,8 +7,10 @@
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>Alloro Practice Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
     <script>
@@ -17,8 +19,10 @@
           extend: {
             fontFamily: {
               sans: ['"Plus Jakarta Sans"', "sans-serif"],
+              heading: ['"Playfair Display"', "serif"],
             },
             colors: {
+              beige: "#fbf8f0",
               brand: {
                 DEFAULT: "#d66853",
                 50: "#fdf3f1",
@@ -59,7 +63,12 @@
         border-radius: 4px;
       }
       body {
-        background-color: #f8fafc;
+        background-color: #fbf8f0;
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+
+      h1, h2, h3, h4, h5, h6 {
+        font-family: "Playfair Display", serif;
       }
 
       /* Scan line animations - CSS keyframes for smooth continuous animation */

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Loader2, MapPin } from "lucide-react";
 import { BusinessProfile } from "../../types";
+import { trackEvent, setCurrentStage } from "../../lib/tracking";
 
 interface CollageItem {
   x: number;
@@ -31,6 +32,12 @@ export const PhotosAnalysisSubStage = ({
       setShowMiniCards(true);
     }, 3000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Fire stage_viewed_3 once on mount (photos sub-stage is a distinct user-visible view)
+  useEffect(() => {
+    setCurrentStage("stage_viewed_3");
+    trackEvent("stage_viewed_3");
   }, []);
 
   return (

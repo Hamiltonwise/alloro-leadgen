@@ -13,9 +13,47 @@ import {
   Clock,
   Sparkles,
   Calendar,
+  ArrowRight,
+  UserPlus,
 } from "lucide-react";
+
+/**
+ * Custom thin elegant checkmark — replaces lucide's heavier `Check` glyph.
+ * Slightly extended downstroke + rounded caps for a refined editorial feel.
+ */
+function FancyCheck({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M3.5 12.5 L9.25 18.25 L20.5 6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 import { AuditStage } from "../../types";
 import { TimeElapsed } from "../ui/TimeElapsed";
+import { trackEvent, getSessionId } from "../../lib/tracking";
+
+/**
+ * Append `?ls={sessionId}` to the signup URL, preserving any pre-existing
+ * query params. Reads the session id lazily — at click-time — because the
+ * tracking session may not have been initialized at component mount.
+ */
+function buildSignupHref(base: string): string {
+  const id = getSessionId();
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}ls=${encodeURIComponent(id)}`;
+}
 
 /**
  * Sidebar Component with Fixed Icon Alignment
@@ -67,12 +105,6 @@ export const Sidebar = ({
       label: "Website Key Insights",
       icon: Sparkles,
     },
-    {
-      id: "schedule-call",
-      label: "Schedule A Strategy Call",
-      icon: Calendar,
-      color: "text-orange-500",
-    },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.id === stage);
@@ -80,7 +112,7 @@ export const Sidebar = ({
   // If we are in dashboard stage, we render a completely different sidebar content
   if (stage === "dashboard") {
     return (
-      <div className="hidden md:flex w-80 flex-col bg-white border-r border-gray-100 h-screen p-6 shadow-lg z-20">
+      <div className="hidden md:flex w-80 flex-col bg-beige border-r border-gray-100 h-screen p-6 shadow-lg z-20">
         <div className="mb-8 flex items-center gap-3">
           <img
             src="/logo.png"
@@ -88,7 +120,7 @@ export const Sidebar = ({
             className="w-9 h-9 object-contain"
           />
           <div className="flex flex-col">
-            <span className="font-bold text-lg text-gray-800 tracking-tight font-sans leading-tight">
+            <span className="font-heading font-semibold text-lg text-gray-900 tracking-tight leading-tight">
               Alloro
             </span>
             <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
@@ -96,52 +128,77 @@ export const Sidebar = ({
             </span>
           </div>
         </div>
-        <div className="space-y-4 flex-1 overflow-y-auto">
-          {dashboardSteps.map((step, idx) => {
-            return (
-              <button
-                key={step.id || `step-${idx}`}
-                onClick={() =>
-                  onDashboardAction && onDashboardAction(step.id as any)
-                }
-                className={`w-full flex items-center gap-3 transition-all duration-200 text-left group py-2.5 px-3 rounded-lg hover:bg-gray-50 ${
-                  step.color ? "" : "text-gray-600"
-                }`}
-              >
-                <div
-                  className={`flex items-center justify-center w-8 h-8 rounded-lg ${
-                    step.color
-                      ? "bg-orange-50 text-orange-500"
-                      : "bg-gray-100 text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-500"
-                  } transition-colors`}
-                >
-                  <step.icon
-                    className={`w-4 h-4 ${step.color ? step.color : ""}`}
-                  />
-                </div>
-                <span
-                  className={`text-sm font-medium ${
-                    step.color
-                      ? "text-orange-600 font-bold"
-                      : "text-gray-600 group-hover:text-gray-900"
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </button>
-            );
-          })}
+        <div className="space-y-2 flex-1 overflow-y-auto">
+          {dashboardSteps.map((step, idx) => (
+            <button
+              key={`step-${idx}`}
+              onClick={() =>
+                onDashboardAction &&
+                onDashboardAction(
+                  (step as { id?: string }).id as any
+                )
+              }
+              className="w-full flex items-center gap-3 transition-all duration-200 text-left group py-2.5 pr-3 rounded-lg hover:bg-white/60 text-gray-700"
+            >
+              <FancyCheck className="w-7 h-7 shrink-0 text-green-600" />
+              <span className="text-[15px] font-medium text-gray-700 group-hover:text-gray-900">
+                {step.label}
+              </span>
+            </button>
+          ))}
         </div>
+
+        {/* Bottom-anchored CTA — desktop replacement for the floating mobile CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-4 rounded-2xl px-5 py-5 text-center"
+          style={{
+            background: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          <p className="text-sm font-semibold text-gray-700 mb-4 leading-snug">
+            Knowing isn't enough. Execution matters. Let{" "}
+            <span className="text-brand-500">Alloro</span> help.
+          </p>
+          <a
+            href="https://app.getalloro.com/signup"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              trackEvent("cta_clicked_create_account", {
+                event_data: { stage: "dashboard" },
+              });
+              e.currentTarget.href = buildSignupHref(
+                "https://app.getalloro.com/signup",
+              );
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-white font-bold rounded-full text-xs whitespace-nowrap"
+            style={{
+              backgroundColor: "#d66853",
+              boxShadow: "0 6px 18px rgba(214, 104, 83, 0.4)",
+            }}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Create Your Free Account
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="hidden md:flex w-80 flex-col bg-white border-r border-gray-100 h-screen p-6 shadow-lg z-20">
+    <div className="hidden md:flex w-80 flex-col bg-beige border-r border-gray-100 h-screen p-6 shadow-lg z-20">
       <div className="mb-8 flex items-center gap-3">
         <img src="/logo.png" alt="Alloro" className="w-9 h-9 object-contain" />
         <div className="flex flex-col">
-          <span className="font-bold text-lg text-gray-800 tracking-tight font-sans leading-tight">
+          <span className="font-heading font-semibold text-lg text-gray-900 tracking-tight leading-tight">
             Alloro
           </span>
           <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
@@ -210,22 +267,59 @@ export const Sidebar = ({
       </div>
 
       {stage !== "input" && (
-        <div className="mt-auto">
-          <div className="flex justify-between text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">
-            <span>Time elapsed</span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              <TimeElapsed />
-            </span>
+        <div className="mt-auto space-y-4">
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              <span>Time elapsed</span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <TimeElapsed />
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden shadow-inner">
-            <motion.div
-              className="bg-gradient-to-r from-brand-400 to-brand-600 h-full rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
+
+          {/* Sidebar-anchored "Knowing isn't enough" CTA — desktop replaces
+              the floating mobile version that lives in DashboardStage. */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="rounded-2xl px-4 py-4 text-center"
+            style={{
+              background: "rgba(255, 255, 255, 0.5)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(15, 23, 42, 0.08)",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.05)",
+            }}
+          >
+            <p className="text-xs font-semibold text-gray-700 mb-3 leading-snug">
+              Knowing isn't enough. Execution matters.
+              <br />
+              Let <span className="text-brand-500">Alloro</span> help.
+            </p>
+            <motion.a
+              href="https://calendar.app.google/yJsmRsEnBSfDTVyz8"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                trackEvent("cta_clicked_strategy_call", {
+                  event_data: { stage },
+                })
+              }
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-white font-bold rounded-full transition-all text-xs"
+              style={{
+                backgroundColor: "#d66853",
+                boxShadow: "0 6px 18px rgba(214, 104, 83, 0.4)",
+              }}
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Book Strategy Call
+              <ArrowRight className="w-3.5 h-3.5" />
+            </motion.a>
+          </motion.div>
         </div>
       )}
     </div>

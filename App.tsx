@@ -26,6 +26,7 @@ import {
   SelectedGBP,
   StartAuditResponse,
 } from "./src/types";
+import { trackEvent, setCurrentStage } from "./src/lib/tracking";
 
 /**
  * Main App Component - Simplified after refactoring
@@ -39,8 +40,10 @@ const App = () => {
   const [selectedGBP, setSelectedGBP] = useState<SelectedGBP | null>(null);
   const [auditId, setAuditId] = useState<string | null>(null);
   const [gbpCarouselComplete, setGbpCarouselComplete] = useState(false);
+  const [competitorMapDisplayed, setCompetitorMapDisplayed] = useState(false);
   const [pendingStage, setPendingStage] = useState<AuditStage | null>(null);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [mobileProgress, setMobileProgress] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPillarCategory, setSelectedPillarCategory] = useState<
     string | null
@@ -80,6 +83,12 @@ const App = () => {
       const result: StartAuditResponse = await response.json();
       if (result.success) {
         setAuditId(result.audit_id);
+        setCurrentStage("audit_started");
+        trackEvent("audit_started", {
+          audit_id: result.audit_id,
+          domain,
+          practice_search_string: practiceSearchString,
+        });
         // Don't update URL here - wait until after email wall to avoid re-triggering
       } else {
         console.error("Failed to start audit:", result.error);
@@ -93,6 +102,12 @@ const App = () => {
   };
 
   // --- EFFECTS ---
+  // Fire `landed` tracking event once on app mount. Fire-and-forget; never blocks.
+  useEffect(() => {
+    setCurrentStage("landed");
+    trackEvent("landed");
+  }, []);
+
   useEffect(() => {
     // Prevent double-execution using ref (synchronous, survives StrictMode double-render)
     if (autostartTriggeredRef.current) return;
@@ -147,35 +162,135 @@ const App = () => {
       return;
     }
 
-    // If we're on GBP stage and trying to move forward but carousel isn't done
+    // GBP gate: hold on analyzing_gbp until carousel completes.
     if (
       stage === "analyzing_gbp" &&
       derivedStage !== "analyzing_gbp" &&
       !gbpCarouselComplete
     ) {
       setPendingStage(derivedStage);
-    } else if (derivedStage !== stage) {
-      // Only update if stage actually changed
+      return;
+    }
+
+    // Competitor-map gate: backend may race past competitor_map → dashboard
+    // before the user has had time to see the map. Hold dashboard until the
+    // map has been displayed for its minimum window. Also force-route through
+    // competitor_map even if backend skipped past it (e.g. dashboard arrives
+    // before the map ever became the derived stage).
+    if (
+      stage === "competitor_map" &&
+      derivedStage === "dashboard" &&
+      !competitorMapDisplayed
+    ) {
+      setPendingStage("dashboard");
+      return;
+    }
+    if (
+      stage === "analyzing_gbp" &&
+      gbpCarouselComplete &&
+      derivedStage === "dashboard"
+    ) {
+      // Hop through competitor_map first. Dashboard remains pending.
+      setStage("competitor_map");
+      setCompetitorMapDisplayed(false);
+      setPendingStage("dashboard");
+      return;
+    }
+
+    if (derivedStage !== stage) {
       setStage(derivedStage);
-      // Reset carousel state when entering GBP stage
       if (derivedStage === "analyzing_gbp") {
         setGbpCarouselComplete(false);
         setPendingStage(null);
       }
+      if (derivedStage === "competitor_map") {
+        setCompetitorMapDisplayed(false);
+        setPendingStage(null);
+      }
     }
-  }, [derivedStage, auditId, stage, gbpCarouselComplete, pendingStage]);
+  }, [
+    derivedStage,
+    auditId,
+    stage,
+    gbpCarouselComplete,
+    competitorMapDisplayed,
+    pendingStage,
+  ]);
 
-  // Handle carousel completion
+  // Mobile progress bar — persists across audit sub-stages (scanning_website
+  // → analyzing_gbp → competitor_map) by tracking start in a ref so stage
+  // changes don't restart the fill. Non-linear piecewise curve so the bar
+  // jumps quickly at first (lots is happening) then slows as it approaches
+  // 95%, with each segment having a different rate for a "skipping but
+  // always forward" feel. Snaps to 100% the moment stage === "dashboard".
+  const progressStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (stage === "input") {
+      progressStartRef.current = null;
+      setMobileProgress(0);
+      return;
+    }
+    if (stage === "dashboard") {
+      progressStartRef.current = null;
+      setMobileProgress(100);
+      return;
+    }
+    if (progressStartRef.current === null) {
+      progressStartRef.current = Date.now();
+    }
+    const computeProgress = (elapsedMs: number): number => {
+      const s = elapsedMs / 1000;
+      if (s < 8) return s * 3; // 0 → 24 fast
+      if (s < 20) return 24 + (s - 8) * 2; // 24 → 48 moderate
+      if (s < 40) return 48 + (s - 20) * 1.2; // 48 → 72 slower
+      if (s < 90) return Math.min(95, 72 + (s - 40) * 0.46); // 72 → 95 crawl
+      return 95;
+    };
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - (progressStartRef.current ?? Date.now());
+      const pct = computeProgress(elapsed);
+      setMobileProgress(pct);
+      if (pct >= 95) clearInterval(interval);
+    }, 400);
+    return () => clearInterval(interval);
+  }, [stage]);
+
+  // Once competitor_map has been on screen long enough, allow advance.
+  useEffect(() => {
+    if (stage !== "competitor_map" || competitorMapDisplayed) return;
+    const timer = setTimeout(() => setCompetitorMapDisplayed(true), 4500);
+    return () => clearTimeout(timer);
+  }, [stage, competitorMapDisplayed]);
+
+  // Pending-stage handlers (after either GBP carousel or map display gate clears).
   useEffect(() => {
     if (
       gbpCarouselComplete &&
       pendingStage &&
+      stage === "analyzing_gbp" &&
       pendingStage !== "analyzing_gbp"
     ) {
-      setStage(pendingStage);
+      // Always route through competitor_map first when leaving GBP.
+      setStage(pendingStage === "dashboard" ? "competitor_map" : pendingStage);
+      if (pendingStage === "dashboard") {
+        setCompetitorMapDisplayed(false);
+        // leave pendingStage = "dashboard" so the next effect picks it up
+      } else {
+        setPendingStage(null);
+      }
+    }
+  }, [gbpCarouselComplete, pendingStage, stage]);
+
+  useEffect(() => {
+    if (
+      competitorMapDisplayed &&
+      pendingStage === "dashboard" &&
+      stage === "competitor_map"
+    ) {
+      setStage("dashboard");
       setPendingStage(null);
     }
-  }, [gbpCarouselComplete, pendingStage]);
+  }, [competitorMapDisplayed, pendingStage, stage]);
 
   // Show error modal when audit polling returns an error
   useEffect(() => {
@@ -210,7 +325,7 @@ const App = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            domain: selectedGBP.websiteUri || `https://${selectedGBP.domain}`,
+            domain: selectedGBP.websiteUri || (selectedGBP.domain ? `https://${selectedGBP.domain}` : ""),
             practice_search_string: selectedGBP.practiceSearchString,
           }),
         });
@@ -218,6 +333,12 @@ const App = () => {
         const result: StartAuditResponse = await response.json();
         if (result.success) {
           setAuditId(result.audit_id);
+          setCurrentStage("audit_started");
+          trackEvent("audit_started", {
+            audit_id: result.audit_id,
+            domain: selectedGBP.domain,
+            practice_search_string: selectedGBP.practiceSearchString,
+          });
         } else {
           console.error("Failed to start audit:", result.error);
           setStage("input");
@@ -250,7 +371,7 @@ const App = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          domain: gbp.websiteUri || `https://${gbp.domain}`,
+          domain: gbp.websiteUri || (gbp.domain ? `https://${gbp.domain}` : ""),
           practice_search_string: gbp.practiceSearchString,
         }),
       });
@@ -258,6 +379,12 @@ const App = () => {
       const result: StartAuditResponse = await response.json();
       if (result.success) {
         setAuditId(result.audit_id);
+        setCurrentStage("audit_started");
+        trackEvent("audit_started", {
+          audit_id: result.audit_id,
+          domain: gbp.domain,
+          practice_search_string: gbp.practiceSearchString,
+        });
         setStage("scanning_website");
       } else {
         console.error("Failed to start audit:", result.error);
@@ -331,8 +458,11 @@ const App = () => {
     () => auditData?.competitors || MOCK_COMPETITORS,
     [auditData?.competitors],
   );
+  const hasWebsiteData = !!auditData?.website_analysis;
+  // No mock fallback — pass real data when present, null otherwise.
+  // DashboardStage greys out website-side UI when this is null.
   const websiteData = useMemo(
-    () => auditData?.website_analysis || MOCK_WEBSITE_ANALYSIS,
+    () => auditData?.website_analysis ?? null,
     [auditData?.website_analysis],
   );
   const gbpData = useMemo(
@@ -349,7 +479,7 @@ const App = () => {
 
   // --- RENDER ---
   return (
-    <div className="flex h-screen bg-white font-sans text-slate-900 overflow-hidden selection:bg-brand-100 selection:text-brand-900">
+    <div className="flex h-screen bg-beige font-sans text-slate-900 overflow-hidden selection:bg-brand-100 selection:text-brand-900">
       {/* Sidebar - Visible on Desktop */}
       <AnimatePresence>
         {stage !== "input" && (
@@ -370,13 +500,67 @@ const App = () => {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative h-full overflow-hidden bg-slate-50">
+      <main className="flex-1 relative h-full overflow-hidden bg-beige flex flex-col">
+        {/* Audit header — sticky, visible on both mobile and desktop during
+            active audit stages. Mobile shows Alloro logo + serif label above
+            the progress bar; desktop skips the lockup (sidebar already has
+            brand) and renders only the progress strip at the very top. */}
+        {stage !== "input" && stage !== "dashboard" && (
+          <header className="sticky top-0 shrink-0 bg-white border-b border-gray-200 z-30">
+            <div className="md:hidden flex items-center gap-2 px-4 py-3">
+              <img
+                src="/logo.png"
+                alt="Alloro"
+                className="w-7 h-7 object-contain shrink-0"
+              />
+              <span className="font-heading text-lg font-bold text-gray-900 tracking-tight">
+                Alloro
+              </span>
+            </div>
+            <div className="h-2 md:h-1.5 w-full bg-gray-100 overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-brand-400 to-brand-600"
+                animate={{ width: `${mobileProgress}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+            </div>
+          </header>
+        )}
+
+        {/* Mobile-only top bar — ONLY on the report (dashboard) stage. White
+            bg with logo+label LEFT and signup CTA on the far RIGHT. Hidden on
+            md+ where the sidebar replaces it. Other stages (input, scanning,
+            gbp, map) don't show this header. */}
+        {stage === "dashboard" && (
+          <header className="md:hidden shrink-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between z-30">
+            <div className="flex items-center gap-2 min-w-0">
+              <img
+                src="/logo.png"
+                alt="Alloro"
+                className="w-7 h-7 object-contain shrink-0"
+              />
+              <span className="font-heading text-base font-semibold text-gray-900 tracking-tight">
+                Alloro
+              </span>
+            </div>
+            <a
+              href="https://app.getalloro.com/signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-2 rounded-full text-xs font-bold shadow-sm shadow-brand-500/30 whitespace-nowrap shrink-0"
+            >
+              Create Free Account
+            </a>
+          </header>
+        )}
+
+        <div className="relative flex-1 overflow-hidden">
         {showInitialLoading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-50"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-beige"
           >
             <div className="flex flex-col items-center gap-4 bg-white px-8 py-6 rounded-2xl shadow-xl border border-gray-200">
               <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
@@ -413,7 +597,6 @@ const App = () => {
             >
               <WebsiteScanStage
                 desktopScreenshot={auditData?.screenshots?.desktop_url}
-                mobileScreenshot={auditData?.screenshots?.mobile_url}
                 domain={selectedGBP?.domain}
               />
             </motion.div>
@@ -461,6 +644,7 @@ const App = () => {
               <DashboardStage
                 business={businessData}
                 websiteData={websiteData}
+                hasWebsiteData={hasWebsiteData}
                 gbpData={gbpData}
                 screenshotUrl={screenshotUrl}
                 auditId={auditId}
@@ -486,6 +670,7 @@ const App = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </main>
 
       {/* Error Modal - Shows when audit fails */}
