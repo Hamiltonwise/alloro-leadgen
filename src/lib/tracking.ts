@@ -49,6 +49,25 @@ export type LeadgenEventName =
   | "email_field_focused"
   | "email_field_blurred_empty";
 
+/**
+ * Non-stage events — these fire unrestricted. Click a CTA 5 times, the
+ * timeline records 5 events. Dedup cache does NOT apply to these.
+ *
+ * Keep in sync with the NON_STAGE_EVENTS set in the backend's
+ * util.event-ordering.ts.
+ */
+const NON_STAGE_EVENTS = new Set<LeadgenEventName>([
+  "cta_clicked_strategy_call",
+  "cta_clicked_create_account",
+  "email_field_focused",
+  "email_field_blurred_empty",
+  "abandoned",
+]);
+
+function isProgressionStage(name: LeadgenEventName): boolean {
+  return !NON_STAGE_EVENTS.has(name);
+}
+
 export interface TrackEventPayload {
   event_name: LeadgenEventName;
   event_data?: Record<string, unknown>;
@@ -74,6 +93,11 @@ interface SessionInitPayload {
 
 const SESSION_STORAGE_KEY = "leadgen_session_id";
 const ATTR_SENT_KEY = "leadgen_attr_sent";
+// Prefix — the full key is `leadgen_fired_stages:<session_id>`, value is
+// a comma-separated list of progression stage event names that have
+// already been dispatched from this device. Server-side strict ordering
+// is the hard contract; this cache just saves round-trips.
+const FIRED_STAGES_PREFIX = "leadgen_fired_stages:";
 const SESSION_ENDPOINT = `${API_BASE_URL}/leadgen/session`;
 const EVENT_ENDPOINT = `${API_BASE_URL}/leadgen/event`;
 const BEACON_ENDPOINT = `${API_BASE_URL}/leadgen/beacon`;
@@ -180,6 +204,61 @@ function buildHeaders(key: string): HeadersInit {
 }
 
 // ---------------------------------------------------------------------------
+// Fired-stages cache — prevents the same progression event from being
+// POSTed repeatedly (mount effects, StrictMode double-invocations, tab
+// switches). Only applies to progression stage events; CTA events always
+// fire.
+// ---------------------------------------------------------------------------
+
+function firedStagesKey(sessionId: string): string {
+  return `${FIRED_STAGES_PREFIX}${sessionId}`;
+}
+
+function readFiredStages(sessionId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(firedStagesKey(sessionId));
+    if (!raw) return new Set();
+    return new Set(raw.split(",").filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeFiredStages(sessionId: string, set: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      firedStagesKey(sessionId),
+      Array.from(set).join(","),
+    );
+  } catch {
+    // localStorage may be unavailable; fall through — server is still
+    // the hard contract on dedup.
+  }
+}
+
+function hasFiredStage(sessionId: string, name: LeadgenEventName): boolean {
+  return readFiredStages(sessionId).has(name);
+}
+
+function markStageFired(sessionId: string, name: LeadgenEventName): void {
+  const set = readFiredStages(sessionId);
+  if (set.has(name)) return;
+  set.add(name);
+  writeFiredStages(sessionId, set);
+}
+
+function clearFiredStages(sessionId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(firedStagesKey(sessionId));
+  } catch {
+    // noop
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -195,6 +274,7 @@ function buildHeaders(key: string): HeadersInit {
  */
 export function adoptSessionId(id: string): void {
   if (!UUID_REGEX.test(id)) return;
+  const previousId = cachedSessionId;
   cachedSessionId = id;
   sessionInitPromise = null;
   if (typeof window === "undefined") return;
@@ -203,6 +283,13 @@ export function adoptSessionId(id: string): void {
   } catch {
     // localStorage may be unavailable — the in-memory cache still
     // works for this tab's lifetime.
+  }
+  // If we swapped to a different session id, wipe the fired-stages
+  // cache for the OLD id so it doesn't pollute storage, and start the
+  // new adopted session with a fresh slate (server still dedupes; this
+  // is optimistic).
+  if (previousId && previousId !== id) {
+    clearFiredStages(previousId);
   }
 }
 
@@ -318,8 +405,20 @@ export function trackEvent(
   const key = getTrackingKey();
   if (!key) return;
 
+  const sessionId = getSessionId();
+
+  // Progression stage events are exactly-once per session. CTA /
+  // interaction events bypass this check. Server enforces the same
+  // rule; the local cache just prevents the fetch round-trip.
+  if (isProgressionStage(name)) {
+    if (hasFiredStage(sessionId, name)) {
+      return;
+    }
+    markStageFired(sessionId, name);
+  }
+
   const body = JSON.stringify({
-    session_id: getSessionId(),
+    session_id: sessionId,
     event_name: name,
     ...extra,
   });

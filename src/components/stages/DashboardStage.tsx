@@ -119,12 +119,23 @@ export const DashboardStage = ({
 
   const reviewGap = topCompetitor.reviewsCount - business.reviewsCount;
 
-  // Fire stage_viewed_5 + results_viewed once on mount (dashboard is final results screen).
-  // Also schedule a "report_engaged_1min" event after 60s of dwell time — strong
-  // signal that the user actually consumed the report rather than bouncing.
+  // `stage_viewed_5` (Report Viewed) fires on mount — objective signal
+  // that the pipeline rendered the dashboard shell. Fires BEFORE the
+  // paywall is satisfied; the blurred report still counts as "report
+  // view" at the UI level.
   useEffect(() => {
     setCurrentStage("stage_viewed_5");
     trackEvent("stage_viewed_5");
+  }, []);
+
+  // `results_viewed` (More Results Viewed) + the 60s `report_engaged_1min`
+  // timer fire ONLY after the user submits the paywall email — up to that
+  // point they're looking at blurred content and waiting, which isn't
+  // engagement. Gating both on `emailSubmitted` gives the funnel an
+  // honest signal instead of every dashboard mount producing a "viewed"
+  // event.
+  useEffect(() => {
+    if (!emailSubmitted) return;
     setCurrentStage("results_viewed");
     trackEvent("results_viewed");
 
@@ -136,7 +147,7 @@ export const DashboardStage = ({
     return () => {
       window.clearTimeout(engagedTimer);
     };
-  }, []);
+  }, [emailSubmitted]);
 
   // Handle email submission
   const handleEmailSubmit = async (email: string) => {
