@@ -25,7 +25,12 @@ import {
   SelectedGBP,
   StartAuditResponse,
 } from "./src/types";
-import { trackEvent, setCurrentStage } from "./src/lib/tracking";
+import {
+  trackEvent,
+  setCurrentStage,
+  resolveSessionByAuditId,
+  adoptSessionId,
+} from "./src/lib/tracking";
 
 /**
  * Main App Component - Simplified after refactoring
@@ -50,6 +55,13 @@ const App = () => {
   const [selectedDataType, setSelectedDataType] = useState<
     "website" | "gbp" | null
   >(null);
+  // Session adoption gate — when the URL carries `?audit_id=`, we look up
+  // the ORIGINAL leadgen session that owns that audit and adopt its id so
+  // subsequent events patch the original session instead of spawning a
+  // phantom row. `landed` and other mount-time trackEvents wait for this
+  // gate so they don't fire against the wrong session id.
+  const [sessionAdopted, setSessionAdopted] = useState(false);
+
   // FAB "Email me when ready" — appears at 1:20 elapsed OR immediately on
   // confirmed audit error. Replaces the old AuditErrorModal entirely.
   const [auditStartedAt, setAuditStartedAt] = useState<number | null>(null);
@@ -109,11 +121,48 @@ const App = () => {
   };
 
   // --- EFFECTS ---
-  // Fire `landed` tracking event once on app mount. Fire-and-forget; never blocks.
+  // Session adoption — runs once on mount, BEFORE any trackEvent fires.
+  // When the URL has `?audit_id=`, the user is opening an EXISTING report
+  // (email link, shared link, etc). Resolve that audit's original session
+  // id and adopt it so every subsequent event patches the original session
+  // instead of creating a phantom row. When there's no `?audit_id=`, we
+  // don't need a lookup — just flip the gate open.
   useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        if (typeof window === "undefined") {
+          if (!cancelled) setSessionAdopted(true);
+          return;
+        }
+        const params = new URLSearchParams(window.location.search);
+        const auditIdParam = params.get("audit_id");
+        if (auditIdParam) {
+          const originalId = await resolveSessionByAuditId(auditIdParam);
+          if (originalId) {
+            adoptSessionId(originalId);
+          }
+          // Whether we adopted or not, open the gate — downstream tracking
+          // should proceed.
+        }
+      } catch {
+        // Silent — tracking failures must never break the UI.
+      } finally {
+        if (!cancelled) setSessionAdopted(true);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fire `landed` once session adoption resolves. Fire-and-forget; never blocks.
+  useEffect(() => {
+    if (!sessionAdopted) return;
     setCurrentStage("landed");
     trackEvent("landed");
-  }, []);
+  }, [sessionAdopted]);
 
   useEffect(() => {
     // Prevent double-execution using ref (synchronous, survives StrictMode double-render)

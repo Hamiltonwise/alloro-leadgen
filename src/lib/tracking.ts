@@ -79,6 +79,10 @@ const EVENT_ENDPOINT = `${API_BASE_URL}/leadgen/event`;
 const BEACON_ENDPOINT = `${API_BASE_URL}/leadgen/beacon`;
 const EMAIL_NOTIFY_ENDPOINT = `${API_BASE_URL}/leadgen/email-notify`;
 const EMAIL_PAYWALL_ENDPOINT = `${API_BASE_URL}/leadgen/email-paywall`;
+const SESSION_BY_AUDIT_ENDPOINT = `${API_BASE_URL}/leadgen/session-by-audit`;
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 let cachedSessionId: string | null = null;
 let sessionInitPromise: Promise<void> | null = null;
@@ -178,6 +182,56 @@ function buildHeaders(key: string): HeadersInit {
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/**
+ * Overwrite the cached + persisted session id. Used when the app mounts
+ * with `?audit_id=<id>` and we've resolved the ORIGINAL session that
+ * owns that audit — we want every subsequent `trackEvent` to land on
+ * that session, not a brand-new one generated from `getSessionId()`.
+ *
+ * Silent on failure (private-mode etc). Also clears the in-flight
+ * session init promise so the next `ensureSession()` triggers a fresh
+ * upsert under the new id.
+ */
+export function adoptSessionId(id: string): void {
+  if (!UUID_REGEX.test(id)) return;
+  cachedSessionId = id;
+  sessionInitPromise = null;
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, id);
+  } catch {
+    // localStorage may be unavailable — the in-memory cache still
+    // works for this tab's lifetime.
+  }
+}
+
+/**
+ * Resolves an audit_id to its originating leadgen session id (if the
+ * audit was kicked off via the leadgen flow). Returns null when no
+ * session owns this audit. Never throws.
+ */
+export async function resolveSessionByAuditId(
+  auditId: string
+): Promise<string | null> {
+  const key = getTrackingKey();
+  if (!key) return null;
+  if (!UUID_REGEX.test(auditId)) return null;
+  try {
+    const response = await fetch(
+      `${SESSION_BY_AUDIT_ENDPOINT}/${encodeURIComponent(auditId)}`,
+      {
+        method: "GET",
+        headers: buildHeaders(key),
+      },
+    );
+    if (!response.ok) return null;
+    const body = (await response.json()) as { session_id?: string | null };
+    return typeof body.session_id === "string" ? body.session_id : null;
+  } catch {
+    return null;
+  }
+}
 
 export function getSessionId(): string {
   if (cachedSessionId) return cachedSessionId;
