@@ -17,6 +17,10 @@ dist
 dist-ssr
 *.local
 
+# Local tool caches / design-iteration artifacts
+.playwright-mcp/
+/leadgen-*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
