@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mail, Loader2, CheckCircle2, X } from "lucide-react";
+import { Mail, Loader2, CheckCircle2, X, RefreshCw } from "lucide-react";
 import { submitEmailNotify } from "../lib/tracking";
 
 /**
@@ -24,6 +24,18 @@ interface Props {
   variant: "wait" | "error";
   auditId: string | null;
   onSubmitted: () => void;
+  /**
+   * Only used in the `error` variant. Invoked when the user clicks "Try
+   * again". Parent is responsible for calling the retry endpoint and
+   * resetting polling state; this component only owns the button lifecycle.
+   */
+  onRetry?: () => Promise<void>;
+  /**
+   * When true (parent has observed a 429 limit_exceeded from the retry
+   * endpoint), hide the "Try again" button entirely and swap copy so the
+   * email form is the only remaining action.
+   */
+  retriesExhausted?: boolean;
 }
 
 const COPY = {
@@ -37,6 +49,11 @@ const COPY = {
     headline: "Heavier traffic than usual.",
     sub: "Pop in your email and we'll deliver the report the moment it's done.",
   },
+  errorExhausted: {
+    pill: "Email me the report",
+    headline: "We've hit our retry limit.",
+    sub: "Drop your email and we'll handle this one manually.",
+  },
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,12 +63,15 @@ export const EmailNotifyFab: React.FC<Props> = ({
   variant,
   auditId,
   onSubmitted,
+  onRetry,
+  retriesExhausted = false,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const successTimeout = useRef<number | null>(null);
 
   // Auto-expand the moment the FAB shows in `error` mode — the user is
@@ -70,7 +90,21 @@ export const EmailNotifyFab: React.FC<Props> = ({
 
   if (!visible) return null;
 
-  const copy = COPY[variant];
+  const copy =
+    variant === "error" && retriesExhausted ? COPY.errorExhausted : COPY[variant];
+
+  const showRetry =
+    variant === "error" && !retriesExhausted && typeof onRetry === "function";
+
+  const handleRetryClick = async () => {
+    if (!onRetry || retrying) return;
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +195,30 @@ export const EmailNotifyFab: React.FC<Props> = ({
                 </p>
               </div>
             </div>
+
+            {showRetry && !success && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleRetryClick}
+                  disabled={retrying}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 active:scale-[0.98] disabled:opacity-60 transition-all"
+                >
+                  {retrying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Retrying…
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" /> Try again
+                    </>
+                  )}
+                </button>
+                <p className="mt-2 text-center text-[11px] uppercase tracking-wide text-gray-400">
+                  — or —
+                </p>
+              </div>
+            )}
 
             {success ? (
               <motion.div

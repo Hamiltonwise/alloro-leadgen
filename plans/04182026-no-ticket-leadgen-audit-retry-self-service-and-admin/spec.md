@@ -29,7 +29,7 @@ Additionally, a dead `handleErrorRetry` path exists in `App.tsx` that, if it wer
 
 ## Context
 
-### Relevant files — backend (`/Users/rustinedave/Desktop/alloro-app/signalsai-backend`)
+### Relevant files — backend (`/Users/rustinedave/Desktop/alloro/src`)
 - `src/workers/processors/auditLeadgen.processor.ts:238-252` — failure branch. Sets `status='failed'`, `error_message`. Does NOT reset `realtime_status` (stays at whatever stage failed), so retry controller must reset it explicitly.
 - `src/workers/queues.ts:34-43` — `getAuditQueue('leadgen')` returns the BullMQ queue. Enqueue with `queue.add("process", { auditId, domain, practiceSearchString })`.
 - `src/controllers/audit/audit-services/auditWorkflowService.ts:18-42` — existing kickoff. Same enqueue payload shape we need to reproduce on retry.
@@ -48,7 +48,7 @@ Additionally, a dead `handleErrorRetry` path exists in `App.tsx` that, if it wer
 - `src/lib/tracking.ts` — add `retryAudit(auditId: string): Promise<{ok: boolean}>` helper matching the `submitEmailNotify` shape.
 - `src/hooks/useAuditPolling` — confirm polling resumes automatically when the audit row flips back to `status='pending'`. If not, may need a manual poll restart.
 
-### Relevant files — admin UI (`/Users/rustinedave/Desktop/alloro-app/signalsai`)
+### Relevant files — admin UI (`/Users/rustinedave/Desktop/alloro/frontend`)
 - `src/pages/admin/LeadgenSubmissions.tsx` — detail drawer lives here (`<LeadgenSubmissionDetail>` around line 20 import). Button mounts inside the drawer, not the table.
 - `src/pages/admin/PracticeRanking.tsx:973-997` — reference fetch+toast pattern to mirror exactly. Uses `fetch`, `react-hot-toast`, and `localStorage.getItem("auth_token")`.
 
@@ -146,7 +146,7 @@ Rollback drops the column.
 
 Also scaffold the three flavors in this plan's `migrations/` folder (`knexmigration.js`, `pgsql.sql`, `mssql.sql`) so deployment scripts can pick the right variant. MSSQL uses `ALTER TABLE ... ADD retry_count INT NOT NULL CONSTRAINT DF_audit_processes_retry_count DEFAULT 0`.
 
-**Files:** `signalsai-backend/src/database/migrations/20260418000000_add_retry_count_to_audit_processes.ts`, plus the three scaffold copies in `plans/.../migrations/`
+**Files:** `alloro/src/database/migrations/20260418000000_add_retry_count_to_audit_processes.ts`, plus the three scaffold copies in `plans/.../migrations/`
 **Depends on:** none
 **Verify:** `npx knex migrate:latest` runs cleanly. `\d audit_processes` shows the new column with default 0. Rollback drops it.
 
@@ -183,7 +183,7 @@ Behavior (happy path, atomic):
 
 Never throws to the caller — catches DB / queue errors, logs, returns `{ok:false, reason:"not_found"}` (safest default).
 
-**Files:** `signalsai-backend/src/controllers/audit/audit-services/service.audit-retry.ts`
+**Files:** `alloro/src/controllers/audit/audit-services/service.audit-retry.ts`
 **Depends on:** T1
 **Verify:** manual — find a failed audit in dev with `retry_count=0`, call the function directly → row flips to pending, `retry_count=1`, BullMQ job appears. Call 3 more times (mark row failed between each) → 4th returns `{ok:false, reason:"limit_exceeded", retryCount: 3}`. Call with `{skipLimit:true, countsTowardLimit:false}` on the capped row → 200, row flips pending, `retry_count` stays at 3.
 
@@ -201,7 +201,7 @@ Never throws to the caller — catches DB / queue errors, logs, returns `{ok:fal
 
 Register route in `src/routes/audit.ts` as `POST /:auditId/retry` behind `requireTrackingKey` middleware (NOT the silent-204 variant). Check how `leadgenTracking.ts:51-61` does it and replicate. Mount just on this route so existing `/audit/*` routes are untouched.
 
-**Files:** `signalsai-backend/src/controllers/audit/audit.controller.ts`, `signalsai-backend/src/routes/audit.ts`
+**Files:** `alloro/src/controllers/audit/audit.controller.ts`, `alloro/src/routes/audit.ts`
 **Depends on:** T2
 **Verify:**
 - `curl -X POST -H "X-Leadgen-Key: $KEY" /api/audit/<failed-id>/retry` → 200, response includes `retry_count: 1`.
@@ -327,7 +327,7 @@ router.post(
 );
 ```
 
-**Files:** `signalsai-backend/src/controllers/admin-leadgen/AdminLeadgenController.ts`, `signalsai-backend/src/routes/admin/leadgenSubmissions.ts`
+**Files:** `alloro/src/controllers/admin-leadgen/AdminLeadgenController.ts`, `alloro/src/routes/admin/leadgenSubmissions.ts`
 **Depends on:** T2
 **Verify:** admin-session curl with valid JWT → 200 on a failed audit, even when `retry_count=3`. After admin rerun, `retry_count` is unchanged. Same call on a completed audit → 409.
 
@@ -349,7 +349,7 @@ Visually: outline button, refresh icon, same type/sizing as existing admin actio
 
 Update the admin detail response shape to include `retry_count` from `audit_processes`. Verify `getSubmissionDetail` already selects it (or add to the select list).
 
-**Files:** `signalsai/src/pages/admin/LeadgenSubmissions.tsx` (or the detail sub-component file — identify during execution), `signalsai-backend/src/controllers/admin-leadgen/AdminLeadgenController.ts` (select list change, if needed)
+**Files:** `alloro/frontend/src/pages/admin/LeadgenSubmissions.tsx` (or the detail sub-component file — identify during execution), `alloro/src/controllers/admin-leadgen/AdminLeadgenController.ts` (select list change, if needed)
 **Depends on:** T7
 **Verify:** open admin panel → find a failed audit with `retry_count=3` → button still present (admin bypass) → click → toast fires, drawer refreshes, `retry_count` still reads 3, status badge flips to pending.
 
@@ -359,7 +359,7 @@ Update the admin detail response shape to include `retry_count` from `audit_proc
 
 - [ ] `npx knex migrate:latest` runs cleanly; `retry_count` column exists on `audit_processes` with default 0
 - [ ] `npx knex migrate:rollback` cleanly drops the column
-- [ ] `npx tsc --noEmit` — zero errors in `signalsai-backend`, `signalsai`, and `alloro-leadgen-tool`
+- [ ] `npx tsc --noEmit` — zero errors in `alloro` (backend + frontend) and `alloro-leadgen-tool`
 - [ ] Shared `retryAuditById` function covers both call sites; admin path passes `{skipLimit:true, countsTowardLimit:false}`; no duplicated reset/enqueue logic
 - [ ] Public endpoint: 200 on valid retry, 401 without key, 404 on unknown ID, 409 on not-failed status, **429 on 4th attempt with `{error:"limit_exceeded", retry_count:3, max_retries:3}`**
 - [ ] `retry_count` increments 0→1→2→3 across three public retries; 4th attempt returns 429 without changing the row

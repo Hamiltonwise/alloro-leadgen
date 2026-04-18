@@ -33,6 +33,7 @@ export type LeadgenEventName =
   | "input_started"
   | "input_submitted"
   | "audit_started"
+  | "audit_retried"
   | "stage_viewed_1"
   | "stage_viewed_2"
   | "stage_viewed_3"
@@ -62,6 +63,7 @@ const NON_STAGE_EVENTS = new Set<LeadgenEventName>([
   "email_field_focused",
   "email_field_blurred_empty",
   "abandoned",
+  "audit_retried",
 ]);
 
 function isProgressionStage(name: LeadgenEventName): boolean {
@@ -104,6 +106,7 @@ const BEACON_ENDPOINT = `${API_BASE_URL}/leadgen/beacon`;
 const EMAIL_NOTIFY_ENDPOINT = `${API_BASE_URL}/leadgen/email-notify`;
 const EMAIL_PAYWALL_ENDPOINT = `${API_BASE_URL}/leadgen/email-paywall`;
 const SESSION_BY_AUDIT_ENDPOINT = `${API_BASE_URL}/leadgen/session-by-audit`;
+const AUDIT_RETRY_ENDPOINT = `${API_BASE_URL}/audit`;
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -506,6 +509,74 @@ export async function submitEmailPaywall(opts: {
     return { ok: response.ok };
   } catch {
     return { ok: false };
+  }
+}
+
+/**
+ * Self-service retry for a failed leadgen audit. POSTs to
+ * `/audit/:auditId/retry` (shared-secret gated by X-Leadgen-Key). The server
+ * resets the audit row to `pending` and re-enqueues the BullMQ job — reusing
+ * the same `audit_id` so session → audit continuity is preserved.
+ *
+ * The public endpoint caps retries at 3 per audit. On the 4th attempt the
+ * server returns 429 `limit_exceeded` and the caller should flip the FAB
+ * into its retry-exhausted state (hide the button, keep the email form).
+ *
+ * Awaitable, never throws. On success also fires a `trackEvent("audit_retried")`
+ * for funnel visibility (non-stage event — doesn't dedup or advance stages).
+ */
+export type RetryAuditResult =
+  | { ok: true; retryCount: number }
+  | {
+      ok: false;
+      reason: "not_failed" | "limit_exceeded" | "not_found" | "network";
+      retryCount?: number;
+    };
+
+export async function retryAudit(auditId: string): Promise<RetryAuditResult> {
+  const key = getTrackingKey();
+  if (!key) return { ok: false, reason: "network" };
+  if (!UUID_REGEX.test(auditId)) return { ok: false, reason: "not_found" };
+
+  try {
+    const response = await fetch(
+      `${AUDIT_RETRY_ENDPOINT}/${encodeURIComponent(auditId)}/retry`,
+      {
+        method: "POST",
+        headers: buildHeaders(key),
+        keepalive: true,
+      }
+    );
+
+    if (response.ok) {
+      const body = (await response.json().catch(() => ({}))) as {
+        retry_count?: number;
+      };
+      const retryCount =
+        typeof body.retry_count === "number" ? body.retry_count : 0;
+      trackEvent("audit_retried", {
+        audit_id: auditId,
+        event_data: { retry_count: retryCount },
+      });
+      return { ok: true, retryCount };
+    }
+
+    if (response.status === 429) {
+      const body = (await response.json().catch(() => ({}))) as {
+        retry_count?: number;
+      };
+      return {
+        ok: false,
+        reason: "limit_exceeded",
+        retryCount:
+          typeof body.retry_count === "number" ? body.retry_count : undefined,
+      };
+    }
+    if (response.status === 404) return { ok: false, reason: "not_found" };
+    if (response.status === 409) return { ok: false, reason: "not_failed" };
+    return { ok: false, reason: "network" };
+  } catch {
+    return { ok: false, reason: "network" };
   }
 }
 

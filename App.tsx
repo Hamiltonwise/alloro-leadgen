@@ -30,6 +30,7 @@ import {
   setCurrentStage,
   resolveSessionByAuditId,
   adoptSessionId,
+  retryAudit,
 } from "./src/lib/tracking";
 
 /**
@@ -70,6 +71,10 @@ const App = () => {
   // Set to true once the FAB submit lands. Causes the dashboard's email
   // paywall to skip — we already have the email, gating again is hostile.
   const [paywallSatisfied, setPaywallSatisfied] = useState(false);
+  // Flipped true once the backend returns 429 limit_exceeded from the retry
+  // endpoint. The FAB hides its "Try again" button and swaps copy so the
+  // email form becomes the only action. Reset when a new audit kicks off.
+  const [retriesExhausted, setRetriesExhausted] = useState(false);
 
   // --- HOOKS ---
   const {
@@ -101,6 +106,7 @@ const App = () => {
       const result: StartAuditResponse = await response.json();
       if (result.success) {
         setAuditId(result.audit_id);
+        setRetriesExhausted(false);
         setCurrentStage("audit_started");
         setAuditStartedAt(Date.now());
         trackEvent("audit_started", {
@@ -401,45 +407,26 @@ const App = () => {
     setGbpCarouselComplete(true);
   }, []);
 
-  // Handle retry from error modal
-  const handleErrorRetry = useCallback(async () => {
-    setFabVisible(false);
-    setAuditId(null);
-    // Re-trigger audit with same selectedGBP data
-    if (selectedGBP) {
-      // Reset stage and start new audit
-      setStage("scanning_website");
-      try {
-        const response = await fetch(`${API_BASE_URL}/audit/start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            domain: selectedGBP.websiteUri || (selectedGBP.domain ? `https://${selectedGBP.domain}` : ""),
-            practice_search_string: selectedGBP.practiceSearchString,
-          }),
-        });
-
-        const result: StartAuditResponse = await response.json();
-        if (result.success) {
-          setAuditId(result.audit_id);
-          setCurrentStage("audit_started");
-          trackEvent("audit_started", {
-            audit_id: result.audit_id,
-            domain: selectedGBP.domain,
-            practice_search_string: selectedGBP.practiceSearchString,
-          });
-        } else {
-          console.error("Failed to start audit:", result.error);
-          setStage("input");
-        }
-      } catch (error) {
-        console.error("Audit start error:", error);
-        setStage("input");
+  // FAB "Try again" handler. Hits the public retry endpoint which resets the
+  // SAME audit row back to pending and re-enqueues the worker job — no new
+  // audit_id, session continuity preserved. On 429 we flip retriesExhausted
+  // so the FAB hides the button and keeps the email form as the sole action.
+  const handleFabRetry = useCallback(async () => {
+    if (!auditId) return;
+    const result = await retryAudit(auditId);
+    if (result.ok === false) {
+      if (result.reason === "limit_exceeded") {
+        setRetriesExhausted(true);
       }
-    } else {
-      setStage("input");
+      return;
     }
-  }, [selectedGBP]);
+    // Reset the scanning flow. The audit row is back to pending; the polling
+    // hook will pick up the new state on its next tick.
+    setFabVisible(false);
+    setStage("scanning_website");
+    setAuditStartedAt(Date.now());
+    setCurrentStage("audit_started");
+  }, [auditId]);
 
   const startAudit = async (gbp: SelectedGBP) => {
     try {
@@ -455,6 +442,7 @@ const App = () => {
       const result: StartAuditResponse = await response.json();
       if (result.success) {
         setAuditId(result.audit_id);
+        setRetriesExhausted(false);
         setCurrentStage("audit_started");
         setAuditStartedAt(Date.now());
         trackEvent("audit_started", {
@@ -759,6 +747,8 @@ const App = () => {
         variant={fabVariant}
         auditId={auditId}
         onSubmitted={handleFabSubmitted}
+        onRetry={handleFabRetry}
+        retriesExhausted={retriesExhausted}
       />
     </div>
   );
