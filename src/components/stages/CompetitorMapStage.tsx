@@ -233,12 +233,18 @@ export const CompetitorMapStage = memo(
                 Scanning competitors in your area...
               </>
             ) : (
+              // Copy must stay true for the entire 50+ second post-fan-out
+              // tail (Branch B website-analysis LLM + final GBP pillar
+              // analysis). The map itself was populated in <1s; what's
+              // happening behind the scenes is cross-referencing your data
+              // against competitors and compiling the full report.
               <>
-                Mapping{" "}
+                <Loader2 className="w-3 h-3 animate-spin inline mr-1" />
+                Cross-referencing your practice against{" "}
                 <strong className="text-gray-900">
-                  {uniqueCompetitors.length} competitors
-                </strong>{" "}
-                in your area. Analyzing review volume and market position...
+                  {uniqueCompetitors.length} local competitors
+                </strong>
+                . Compiling website &amp; GBP insights...
               </>
             )}
           </p>

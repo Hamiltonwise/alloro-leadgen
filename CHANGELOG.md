@@ -2,6 +2,31 @@
 
 All notable changes to the Alloro Leadgen Tool are documented here.
 
+## [0.0.4] - April 2026
+
+### Audit — Blocked-State UX + Honest Stage Copy
+
+Two changes paired with backend Audit 0.0.29 to fix the UX for Cloudflare-protected websites and stop the competitor-map stage from lying about what's happening during the post-fan-out tail.
+
+**Key Changes — Blocked-state UI:**
+- `AuditStatusResponse` adds `website_blocked?: boolean` matching the new backend column. Optional for forward-compat with older API versions.
+- `useAuditPolling.ts` now detects scrape-blocked failures (`error_message` matching `/scrape failed|cannot load page|ERR_BLOCKED/i`) and **keeps polling** until `realtime_status >= 4` instead of stopping at the moment the failure flag is written. Without this, polling stopped at `realtime_status=1` the second the scrape failed and missed the trailing self GBP / competitor branch updates that complete a few seconds later — leaving the UI frozen on "scanning_website".
+- `App.tsx` reads `auditData?.website_blocked` and threads it to `DashboardStage` as a new prop.
+- `DashboardStage.tsx` adds a third state to three placeholder branches (above-the-fold screenshot card, Website Performance Grade card body, big "Website Performance Metrics" card). When `website_blocked === true`:
+  - Screenshot card: amber dashed border + "Site Blocks Scanners" instead of grey "No website".
+  - Performance Grade card: amber "Website Blocks Scanners" instead of grey "No website analyzed".
+  - Big card: explainer text "Your website blocks Alloro scanners. This site uses bot protection (Cloudflare or similar) which prevents Alloro from analyzing the website's content. Your Google Business Profile report below is unaffected." No CTA to build a new website (user already has one).
+
+**Key Changes — Honest stage copy:**
+- `CompetitorMapStage.tsx` info-panel copy rewritten. The old line ("Mapping {N} competitors in your area. Analyzing review volume and market position...") stayed on screen for 50+ seconds after the map was actually populated, while behind the scenes Branch B's website-analysis LLM and the final GBP pillar agents were running. New copy ("Cross-referencing your practice against {N} local competitors. Compiling website & GBP insights...") stays accurate for the entire post-fan-out tail and works in all three website states (full data / blocked / no-website-provided).
+
+**Commits:**
+- `App.tsx` — `websiteBlocked` derived from `auditData?.website_blocked`, threaded as prop.
+- `src/components/stages/DashboardStage.tsx` — three-way placeholders for screenshot / grade / big-CTA cards.
+- `src/components/stages/CompetitorMapStage.tsx` — honest post-load copy.
+- `src/hooks/useAuditPolling.ts` — keep polling on scrape-block until `realtime_status >= 4`.
+- `src/types/index.ts` — `website_blocked?: boolean` on `AuditStatusResponse`.
+
 ## [0.0.3] - April 2026
 
 ### Self-Service Audit Retry on the Error FAB
