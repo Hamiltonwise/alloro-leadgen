@@ -27,12 +27,40 @@ export function useAuditPolling(auditId: string | null) {
           }
         }
       } else {
-        // Stop polling immediately on error
-        setError(result.error_message || "Failed to fetch status");
-        setIsPolling(false);
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+        // Bot-protected targets (Cloudflare et al.) surface as status=failed
+        // with a scrape-specific error_message while self_gbp + competitors
+        // are still populated. Keep the partial data and suppress the error
+        // so the UI flows to competitor_map (realtime_status=4 caps it there)
+        // instead of firing the misleading "Heavier traffic than usual" FAB.
+        const msg = result.error_message || "";
+        const isScrapeBlocked =
+          result.status === "failed" &&
+          /scrape failed|cannot load page|ERR_BLOCKED/i.test(msg);
+
+        if (isScrapeBlocked) {
+          setData(result);
+          setError(null);
+          // Keep polling: the backend marks status=failed at the moment the
+          // scrape blows up, but its parallel branches (self GBP scrape,
+          // competitor GBPs) finish ~5s later and bump realtime_status. We
+          // need those updates to land before stopping, otherwise the UI
+          // freezes on "scanning_website" (realtime_status=1). Stop only
+          // when realtime_status has reached its terminal value for this
+          // scenario (4 = competitor map ready; gbp_analysis won't run).
+          if ((result.realtime_status ?? 0) >= 4) {
+            setIsPolling(false);
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+          }
+        } else {
+          setError(msg || "Failed to fetch status");
+          setIsPolling(false);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
         }
       }
     } catch (err) {

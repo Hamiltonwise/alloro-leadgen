@@ -84,6 +84,7 @@ export const DashboardStage = ({
   business,
   websiteData,
   hasWebsiteData = true,
+  websiteBlocked = false,
   gbpData,
   screenshotUrl,
   auditId,
@@ -99,6 +100,12 @@ export const DashboardStage = ({
   business: BusinessProfile;
   websiteData: WebsiteAnalysis | null;
   hasWebsiteData?: boolean;
+  // True when the user provided a website URL but our scrapers (default
+  // Puppeteer + stealth fallback) were both blocked by bot-protection.
+  // The site IS live to humans — we just can't analyze it. Drives a
+  // distinct "Your website blocks Alloro scanners" UX rather than the
+  // generic "No website" placeholder.
+  websiteBlocked?: boolean;
   gbpData: GBPAnalysis;
   screenshotUrl?: string;
   auditId?: string | null;
@@ -278,6 +285,13 @@ export const DashboardStage = ({
                     </span>
                   </motion.div>
                 </div>
+              ) : websiteBlocked ? (
+                <div className="rounded-xl border border-dashed border-amber-300 aspect-video flex flex-col items-center justify-center bg-amber-50/60 px-3">
+                  <Globe className="w-10 h-10 text-amber-400 mb-2" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 text-center leading-tight">
+                    Site Blocks Scanners
+                  </span>
+                </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-gray-300 aspect-video flex flex-col items-center justify-center bg-gray-50">
                   <Globe className="w-10 h-10 text-gray-300 mb-2" />
@@ -434,6 +448,15 @@ export const DashboardStage = ({
                     />
                   </div>
                 </>
+              ) : websiteBlocked ? (
+                <div className="flex-1 flex items-center justify-center py-2 opacity-70">
+                  <div className="text-center">
+                    <div className="text-3xl font-black text-amber-500 mb-1">—</div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                      Website Blocks Scanners
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center py-2 opacity-60 grayscale">
                   <div className="text-center">
@@ -903,10 +926,31 @@ export const DashboardStage = ({
                 </motion.a>
               </motion.div>
             </motion.div>
-            {/* Website Performance Metrics — only when a website was analyzed.
-                When the user opted "no website yet" we show a minimal
-                placeholder card with a CTA to create an account + website. */}
-            {!hasWebsiteData && (
+            {/* Website Performance Metrics card — three states:
+                  1. Real website data → render the full metrics card below
+                  2. Website blocked (CF etc.) → show "your site blocks scanners"
+                     placeholder, NO CTA to build a new site (user has one)
+                  3. No website provided → show "No Website Yet?" CTA card */}
+            {!hasWebsiteData && websiteBlocked && (
+              <motion.div
+                className="bg-amber-50/40 rounded-2xl shadow-sm border border-dashed border-amber-300 p-6 md:p-8 mb-8 text-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Globe className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+                <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">
+                  Your website blocks Alloro scanners
+                </h3>
+                <p className="text-sm text-gray-600 max-w-md mx-auto mb-2">
+                  This site uses bot protection (Cloudflare or similar) which
+                  prevents Alloro from analyzing the website's content.
+                </p>
+                <p className="text-xs text-gray-500 max-w-md mx-auto">
+                  Your Google Business Profile report below is unaffected.
+                </p>
+              </motion.div>
+            )}
+            {!hasWebsiteData && !websiteBlocked && (
               <motion.div
                 className="bg-white rounded-2xl shadow-sm border border-dashed border-gray-300 p-6 md:p-8 mb-8 text-center"
                 initial={{ opacity: 0, y: 10 }}

@@ -524,6 +524,12 @@ const App = () => {
     [auditData?.competitors],
   );
   const hasWebsiteData = !!auditData?.website_analysis;
+  // True when the user provided a website URL but our scrapers were
+  // blocked by bot-protection (Cloudflare etc). Distinct from
+  // !hasWebsiteData (which is true for both blocked AND no-website-provided).
+  // Drives the "Your website blocks Alloro scanners" placeholder vs the
+  // generic "No Website Yet?" placeholder in DashboardStage.
+  const websiteBlocked = !!auditData?.website_blocked;
   // No mock fallback — pass real data when present, null otherwise.
   // DashboardStage greys out website-side UI when this is null.
   const websiteData = useMemo(
@@ -710,6 +716,7 @@ const App = () => {
                 business={businessData}
                 websiteData={websiteData}
                 hasWebsiteData={hasWebsiteData}
+                websiteBlocked={websiteBlocked}
                 gbpData={gbpData}
                 screenshotUrl={screenshotUrl}
                 auditId={auditId}

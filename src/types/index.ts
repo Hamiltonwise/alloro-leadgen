@@ -271,6 +271,11 @@ export interface AuditStatusResponse {
   self_gbp: BusinessProfile | null;
   competitors: Competitor[] | null;
   gbp_analysis: GBPAnalysis | null;
+  // True when homepage scrape was bot-blocked (Cloudflare etc.) and both
+  // default + stealth methods exhausted. Drives the "Your website blocks
+  // Alloro scanners" placeholder vs the generic "NO WEBSITE" placeholder.
+  // Optional for forward-compat with older API versions that don't emit it.
+  website_blocked?: boolean;
 }
 
 export interface StartAuditResponse {
